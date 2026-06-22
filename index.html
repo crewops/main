@@ -30,7 +30,7 @@ textarea{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #e2e8f
 .alert{padding:14px 16px;border-radius:12px;margin-bottom:12px;font-size:14px}
 .alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}.alert-success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
 .alert-info{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}.alert-warn{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
-.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
 .stat-card{background:#fff;border-radius:12px;padding:14px 6px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .stat-num{font-size:24px;font-weight:700}.stat-label{font-size:10px;color:#94a3b8;margin-top:2px;text-transform:uppercase}
 .stat-pending .stat-num{color:#d97706}.stat-in .stat-num{color:#059669}.stat-out .stat-num{color:#2563eb}.stat-total .stat-num{color:#6366f1}.stat-absent .stat-num{color:#dc2626}
@@ -176,9 +176,7 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
  <div class="stat-card stat-pending"><div class="stat-num" id="st-p">-</div><div class="stat-label">Pending</div></div>
  <div class="stat-card stat-out"><div class="stat-num" id="st-o">-</div><div class="stat-label">Out</div></div>
  <div class="stat-card stat-absent"><div class="stat-num" id="st-a">-</div><div class="stat-label">Absent</div></div>
- </div>
- <div class="stats-grid" style="grid-template-columns:1fr">
-  <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active (excl. absent)</div></div>
+  <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active</div></div>
 </div>
 <div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
 
@@ -223,6 +221,9 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 const API='https://script.google.com/macros/s/AKfycbxVXyMn-byyUMFy8nTBMGjEUTahSO9jWav9n7mhWAfrKSOYVmX3nyVEW4cfurAAIcxT-Q/exec';
 let E={c:'',n:''},D=[],Tags={},CO=false,scanner=null,AK='',AI='',AC=[];
 
+// IC & phone normalizer
+function fmtIC(ic){const s=String(ic||'').replace(/[-\s]/g,'');if(s.length===12)return s.substring(0,6)+'-'+s.substring(6,8)+'-'+s.substring(8);return s}
+function fmtPhone(ph){let s=String(ph||'').trim();if(!s||s==='0'||s==='null')return'-';if(s.match(/^[1-9]/)&&s.length>=9&&s.length<=10)s='0'+s;return s}
 // Malaysia time helper (UTC+8)
 function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000-d.getTimezoneOffset()*60*1000).toISOString().replace('T',' ').substring(0,19)}
 function fmtTime(t){if(!t||t==='-')return'-';try{if(t.includes('T')&&t.includes('Z')){const d=new Date(t);d.setHours(d.getHours()+8);return'D: '+d.toISOString().substring(0,10)+' T: '+d.toISOString().substring(11,19)}if(t.includes('(offline)'))return t;return t}catch(e){return t}}
@@ -422,10 +423,10 @@ async function doExport(){mg('exp-msg','Generating...','info');const r=await api
 
 function renderAdm(list){const c=el('admin-tbl');el('flt-sum').textContent='Showing '+list.length;if(!list.length){c.innerHTML='<div class="loading">No crew</div>';return}
  let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Sec</th><th>Lvl</th><th>Position</th><th>Meal</th><th>Tag</th><th>Status</th></tr>';
- list.forEach(r=>{const ph=r.phone?'<a href="tel:'+r.phone+'" style="color:#6366f1;text-decoration:none">📞'+r.phone+'</a>':'-';h+='<tr><td style="font-weight:600">'+r.name+'</td><td style="font-size:11px;color:#64748b">'+r.ic+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
+ list.forEach(r=>{const pf=fmtPhone(r.phone);const ph=pf!=='-'?'<a href="tel:'+pf+'" style="color:#6366f1;text-decoration:none">📞'+pf+'</a>':'-';h+='<tr><td style="font-weight:600">'+r.name+'</td><td style="font-size:11px;color:#64748b">'+fmtIC(r.ic)+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
  h+='</table></div>';c.innerHTML=h}
 function fltAdmin(){const q=el('flt-q').value.toLowerCase().trim(),st=el('flt-st').value,pos=el('flt-pos').value,meal=el('flt-meal').value;
- renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').includes(q)||String(c.phone||'').includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)}))}
+ renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))||fmtPhone(c.phone).includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)}))}
 function popAdmFlt(){const p=[...new Set(AC.map(c=>c.position).filter(Boolean))].sort(),m=[...new Set(AC.map(c=>c.meal).filter(Boolean))].sort();
  el('flt-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('flt-pos').innerHTML+='<option>'+v+'</option>');
  el('flt-meal').innerHTML='<option value="">All Meals</option>';m.forEach(v=>el('flt-meal').innerHTML+='<option>'+v+'</option>')}

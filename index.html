@@ -157,7 +157,7 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
  <button class="btn btn-yellow" onclick="doSync()" style="font-size:16px;padding:16px">🔄 Sync Now</button>
 </div></div>
 
-<button class="btn btn-outline" onclick="show('s-role')">← Back to Menu</button>
+<button class="btn btn-outline" onclick="counterBack()">← Back</button>
 </div>
 
 <!-- ADMIN LOGIN -->
@@ -176,6 +176,9 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
  <div class="stat-card stat-pending"><div class="stat-num" id="st-p">-</div><div class="stat-label">Pending</div></div>
  <div class="stat-card stat-out"><div class="stat-num" id="st-o">-</div><div class="stat-label">Out</div></div>
  <div class="stat-card stat-absent"><div class="stat-num" id="st-a">-</div><div class="stat-label">Absent</div></div>
+ </div>
+ <div class="stats-grid" style="grid-template-columns:1fr">
+  <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active (excl. absent)</div></div>
 </div>
 <div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
 
@@ -219,6 +222,10 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 <script>
 const API='https://script.google.com/macros/s/AKfycbxVXyMn-byyUMFy8nTBMGjEUTahSO9jWav9n7mhWAfrKSOYVmX3nyVEW4cfurAAIcxT-Q/exec';
 let E={c:'',n:''},D=[],Tags={},CO=false,scanner=null,AK='',AI='',AC=[];
+
+// Malaysia time helper (UTC+8)
+function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000-d.getTimezoneOffset()*60*1000).toISOString().replace('T',' ').substring(0,19)}
+function fmtTime(t){if(!t||t==='-')return'-';try{if(t.includes('T')&&t.includes('Z')){const d=new Date(t);d.setHours(d.getHours()+8);return'D: '+d.toISOString().substring(0,10)+' T: '+d.toISOString().substring(11,19)}if(t.includes('(offline)'))return t;return t}catch(e){return t}}
 
 // ===== UTILS =====
 function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
@@ -271,12 +278,12 @@ function cMode(m){el('m-pre').classList.toggle('active',m==='pre');el('m-dur').c
 function cTab(t){['scan','ic'].forEach(x=>{el('t-'+x).classList.toggle('active',x===t);el('tab-'+x).style.display=x===t?'block':'none'});el('cinfo').style.display='none';el('multi').style.display='none';if(t==='scan')startCam();else stopCam()}
 function dTab(t){el('dt-find').classList.toggle('active',t==='find');el('dt-tag').classList.toggle('active',t==='tag');el('dtab-find').style.display=t==='find'?'block':'none';el('dtab-tag').style.display=t==='tag'?'block':'none'}
 
-function searchIC(){const ic=el('inp-mic').value.trim();if(!ic)return;const m=findIC(ic);if(!m.length)return mg('scan-msg','IC not found. Look for Admin.','error');if(m.length===1)showCrew(m[0]);else showPick(m)}
+function searchIC(){const ic=el('inp-mic').value.trim();if(!ic)return;el('multi').style.display='none';el('cinfo').style.display='none';const m=findIC(ic);if(!m.length)return mg('scan-msg','IC not found. Look for Admin.','error');if(m.length===1)showCrew(m[0]);else showPick(m)}
 function showPick(list){const l=el('multi-list');l.innerHTML='';list.forEach(a=>{const off=a.status==='checked_out';l.innerHTML+='<div class="pick '+(off?'off':'')+'" data-k="'+a.key+'" onclick="'+(off?'':'pickOne(this)')+'"><div style="display:flex;justify-content:space-between;align-items:center"><div><span class="pos">'+a.position+'</span><div style="font-size:12px;color:#64748b;margin-top:4px">'+a.section+' · '+a.level+'</div></div>'+sb(a.status)+'</div></div>'});el('multi').style.display='block';el('cinfo').style.display='none'}
 function pickOne(e){const c=findKey(e.dataset.k);if(c){el('multi').style.display='none';showCrew(c)}}
 
 function showCrew(c){
- ['inp-tag','inp-cmt','inp-ncmt'].forEach(id=>el(id).value='');hd('ci-result');
+ ['inp-tag','inp-cmt','inp-ncmt','inp-mic','inp-dtag'].forEach(id=>{try{el(id).value=''}catch(e){}});hd('ci-result');el('multi').style.display='none';
  el('ci-name').textContent=c.name;el('ci-ic').textContent=c.ic;el('ci-sec').textContent=c.section;el('ci-lvl').textContent=c.level;el('ci-pos').textContent=c.position;el('ci-ts').textContent=c.tshirt||'-';el('ci-meal').textContent=c.meal||'-';
  const ci=el('f-cin'),co=el('f-cout'),cm=el('f-cmt'),st=el('ci-st');
  if(c.status==='pending'){st.innerHTML=sb('pending');ci.style.display='block';co.style.display='none';cm.style.display='none'}
@@ -292,7 +299,7 @@ function onQR(text){try{const d=JSON.parse(text);if(d.eventCode!==E.c)return mg(
 async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').value.trim();if(!tag){alert('Enter tag number');return}
  const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,tu=tag.toUpperCase();
  if(Tags[tu]){mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error');return}
- const data={eventCode:E.c,ic,tag,cmt,key:k};
+ const data={eventCode:E.c,ic,tag,cmt,key:k,clientTime:myTime()};
  try{const r=await api('checkIn',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
   if(r.success){el('f-cin').style.display='none';el('inp-tag').value='';el('inp-cmt').value='';const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=r.time}Tags[tu]=c?c.name:''}}
  catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin='(offline)'}Tags[tu]=c?c.name:'';
@@ -300,7 +307,7 @@ async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').val
   else mg('ci-result','Server error. Try again.','error')}}
 
 // Check Out
-async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k};
+async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k,clientTime:myTime()};
  try{const r=await api('checkOut',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
   if(r.success){el('f-cout').style.display='none';const c=findKey(k);if(c){c.status='checked_out';c.cout=r.time}}}
  catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(k);if(c){c.status='checked_out';c.cout='(offline)'}
@@ -314,6 +321,14 @@ async function doCmt(role){const inp=role==='admin'?'adm-ncmt':'inp-ncmt',res=ro
  try{const r=await api('addComment',{eventCode:E.c,ic,comment,key:k});mg(res,r.message,r.success?'success':'error');if(r.success)el(inp).value=''}
  catch(e){if(!navigator.onLine){addQ('addComment',{eventCode:E.c,ic,comment,key:k});mg(res,'⚡ Saved offline','warn');el(inp).value=''}else mg(res,'Server error','error')}}
 
+function counterBack(){
+  // If showing crew info, go back to search
+  if(el('cinfo').style.display!=='none'){nextCrew();return}
+  // If showing multi-pick, go back to search
+  if(el('multi').style.display!=='none'){el('multi').style.display='none';return}
+  // Otherwise go to role selection
+  show('s-role');
+}
 function nextCrew(){el('cinfo').style.display='none';el('multi').style.display='none';['inp-tag','inp-cmt','inp-ncmt','inp-mic'].forEach(id=>el(id).value='');mg('scan-msg','📷 Ready — point at next QR code','info');if(el('t-scan').classList.contains('active'))startCam()}
 
 // During Event
@@ -335,7 +350,7 @@ function tagSearch(){const tag=el('inp-dtag').value.trim();if(!tag)return;const 
 async function tagOut(key,ic){
  const data={eventCode:E.c,ic,key};
  try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');tagSearch()}else popup(r.message,'#ef4444')}
- catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout='(offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
+ catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
 
 // ===== CAMERA (live scanner primary on GitHub Pages) =====
 function startCam(){if(scanner)return;
@@ -381,7 +396,7 @@ async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg
 async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
  const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
  const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length;
- el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;
+ el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;
  el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
  const pl=el('pos-list');pl.innerHTML='';const pos={};AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
  Object.entries(pos).forEach(([p,d])=>{const pct=d.t>0?Math.round(d.i/d.t*100):0;pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+d.i+'/'+d.t+' · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
@@ -401,7 +416,7 @@ async function doReplace(){const o=el('r-oic').value.trim(),n=el('r-nn').value.t
 async function doExport(){mg('exp-msg','Generating...','info');const r=await api('getExportData',{eventCode:E.c});if(!r.success)return mg('exp-msg',r.message,'error');hd('exp-msg');
  const g={};r.crewList.forEach(c=>{if(!g[c.position])g[c.position]=[];g[c.position].push(c)});
  let h='<div style="text-align:center;margin-bottom:24px;font-family:Arial"><h1 style="font-size:20px;margin:0">'+r.eventName+'</h1><p style="color:#666;font-size:13px;margin-top:4px">Attendance Report'+(r.eventDate?' · '+new Date(r.eventDate).toLocaleDateString():'')+'</p></div>';
- Object.entries(g).forEach(([p,crew])=>{h+='<h2 style="font-size:15px;margin:20px 0 8px;padding:8px 14px;background:#f5f3ff;color:#6366f1;border-radius:8px;border-left:4px solid #6366f1;font-family:Arial">'+p+' ('+crew.length+')</h2><table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial"><tr style="background:#f8fafc"><th style="border:1px solid #e2e8f0;padding:8px;text-align:center;width:40px">No</th><th style="border:1px solid #e2e8f0;padding:8px">Name</th><th style="border:1px solid #e2e8f0;padding:8px">IC</th><th style="border:1px solid #e2e8f0;padding:8px">Check In</th><th style="border:1px solid #e2e8f0;padding:8px">Check Out</th></tr>';crew.forEach((c,i)=>{h+='<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:center">'+(i+1)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.name+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.ic+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.cin+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.cout+'</td></tr>'});h+='</table>'});
+ Object.entries(g).forEach(([p,crew])=>{h+='<h2 style="font-size:15px;margin:20px 0 8px;padding:8px 14px;background:#f5f3ff;color:#6366f1;border-radius:8px;border-left:4px solid #6366f1;font-family:Arial">'+p+' ('+crew.length+')</h2><table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial"><tr style="background:#f8fafc"><th style="border:1px solid #e2e8f0;padding:8px;text-align:center;width:40px">No</th><th style="border:1px solid #e2e8f0;padding:8px">Name</th><th style="border:1px solid #e2e8f0;padding:8px">IC</th><th style="border:1px solid #e2e8f0;padding:8px">Check In</th><th style="border:1px solid #e2e8f0;padding:8px">Check Out</th></tr>';crew.forEach((c,i)=>{h+='<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:center">'+(i+1)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.name+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.ic+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cin)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cout)+'</td></tr>'});h+='</table>'});
  h+='<div style="margin-top:30px;font-size:11px;color:#94a3b8;text-align:center;font-family:Arial">Generated '+new Date().toLocaleString()+'</div>';
  el('exp-html').innerHTML=h;show('s-export')}
 
@@ -409,8 +424,8 @@ function renderAdm(list){const c=el('admin-tbl');el('flt-sum').textContent='Show
  let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Sec</th><th>Lvl</th><th>Position</th><th>Meal</th><th>Tag</th><th>Status</th></tr>';
  list.forEach(r=>{const ph=r.phone?'<a href="tel:'+r.phone+'" style="color:#6366f1;text-decoration:none">📞'+r.phone+'</a>':'-';h+='<tr><td style="font-weight:600">'+r.name+'</td><td style="font-size:11px;color:#64748b">'+r.ic+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
  h+='</table></div>';c.innerHTML=h}
-function fltAdmin(){const q=el('flt-q').value.toLowerCase(),st=el('flt-st').value,pos=el('flt-pos').value,meal=el('flt-meal').value;
- renderAdm(AC.filter(c=>(!q||c.name.toLowerCase().includes(q)||String(c.ic).includes(q)||(c.phone&&c.phone.includes(q)))&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)))}
+function fltAdmin(){const q=el('flt-q').value.toLowerCase().trim(),st=el('flt-st').value,pos=el('flt-pos').value,meal=el('flt-meal').value;
+ renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').includes(q)||String(c.phone||'').includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)}))}
 function popAdmFlt(){const p=[...new Set(AC.map(c=>c.position).filter(Boolean))].sort(),m=[...new Set(AC.map(c=>c.meal).filter(Boolean))].sort();
  el('flt-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('flt-pos').innerHTML+='<option>'+v+'</option>');
  el('flt-meal').innerHTML='<option value="">All Meals</option>';m.forEach(v=>el('flt-meal').innerHTML+='<option>'+v+'</option>')}

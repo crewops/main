@@ -192,6 +192,13 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 <div class="col-h" onclick="tog(this,'ce')"><h2>📄 Export Report</h2><span class="arr">▼</span></div>
 <div id="ce" class="col-b"><div class="card" style="margin-top:0"><p style="font-size:13px;color:#64748b;margin-bottom:12px">Grouped by position, active only.</p><button class="btn btn-primary" onclick="doExport()">📄 Generate</button><div id="exp-msg" style="display:none;margin-top:12px"></div></div></div>
 
+<div class="col-h" onclick="tog(this,'cbl')"><h2>⚫ Blacklist</h2><span class="arr">▼</span></div>
+<div id="cbl" class="col-b"><div class="card" style="margin-top:0">
+ <p style="font-size:13px;color:#64748b;margin-bottom:12px">Crew members who will not be rehired for future events.</p>
+ <button class="btn btn-outline btn-sm" onclick="loadBlacklist()" style="margin-bottom:12px">🔄 Load Blacklist</button>
+ <div id="bl-list"></div>
+</div></div>
+
 <div class="col-h open" onclick="tog(this,'cl')"><h2>📋 Crew List</h2><span class="arr">▼</span></div>
 <div id="cl" class="col-b open"><div class="card" style="margin-top:0">
  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;color:#64748b" id="flt-sum"></span><button class="btn btn-outline btn-sm" onclick="loadAdmin()">🔄</button></div>
@@ -407,7 +414,7 @@ async function toggleCO(){const r=await api('toggleCheckout',{eventCode:E.c});if
 
 async function adminTagSearch(){const tag=el('inp-atag').value.trim();if(!tag)return;
  try{const r=await api('getCrewByTag',{eventCode:E.c,tag});const c=el('atag-r');c.style.display='block';
-  if(r.success){AK=r.key;AI=r.ic;c.innerHTML='<div style="margin-top:12px"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+r.name+'</span></div><div class="info-row"><span class="info-label">IC</span><span class="info-value">'+r.ic+'</span></div><div class="info-row"><span class="info-label">Phone</span><span class="info-value"><a href="tel:'+r.phone+'" style="color:#6366f1">📞 '+(r.phone||'-')+'</a></span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+r.position+'</span></span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(r.status)+'</span></div>'+(r.cmt?'<div class="comment-box" style="margin-top:8px">📝 '+r.cmt+'</div>':'')+'<textarea id="adm-ncmt" placeholder="Comment..." style="margin-top:8px"></textarea><button class="btn btn-primary" onclick="doCmt(\'admin\')" style="margin-top:4px">💾 Save</button><div id="adm-cmsg" class="alert" style="display:none;margin-top:8px"></div></div>'}
+  if(r.success){AK=r.key;AI=r.ic;c.innerHTML='<div style="margin-top:12px"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+r.name+'</span></div><div class="info-row"><span class="info-label">IC</span><span class="info-value">'+r.ic+'</span></div><div class="info-row"><span class="info-label">Phone</span><span class="info-value"><a href="tel:'+r.phone+'" style="color:#6366f1">📞 '+(r.phone||'-')+'</a></span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+r.position+'</span></span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(r.status)+'</span></div>'+(r.cmt?'<div class="comment-box" style="margin-top:8px">📝 '+r.cmt+'</div>':'')+'<textarea id="adm-ncmt" placeholder="Comment..." style="margin-top:8px"></textarea><button class="btn btn-primary" onclick="doCmt(\'admin\')" style="margin-top:4px">💾 Save</button><div id="adm-cmsg" class="alert" style="display:none;margin-top:8px"></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0"><input type="text" id="bl-reason" placeholder="Blacklist reason..."><button class="btn btn-danger btn-sm" onclick="doBlacklist()" style="margin-top:4px">⚫ Add to Blacklist</button><div id="bl-msg" class="alert" style="display:none;margin-top:8px"></div></div></div>'}
   else c.innerHTML='<div class="alert alert-error" style="margin-top:8px">'+r.message+'</div>'}catch(e){}}
 
 async function doReplace(){const o=el('r-oic').value.trim(),n=el('r-nn').value.trim(),ni=el('r-nic').value.trim(),np=el('r-nph').value.trim(),nt=el('r-nts').value.trim(),rf=el('r-ref').value.trim();
@@ -423,7 +430,7 @@ async function doExport(){mg('exp-msg','Generating...','info');const r=await api
 
 function renderAdm(list){const c=el('admin-tbl');el('flt-sum').textContent='Showing '+list.length;if(!list.length){c.innerHTML='<div class="loading">No crew</div>';return}
  let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Sec</th><th>Lvl</th><th>Position</th><th>Meal</th><th>Tag</th><th>Status</th></tr>';
- list.forEach(r=>{const pf=fmtPhone(r.phone);const ph=pf!=='-'?'<a href="tel:'+pf+'" style="color:#6366f1;text-decoration:none">📞'+pf+'</a>':'-';h+='<tr><td style="font-weight:600">'+r.name+'</td><td style="font-size:11px;color:#64748b">'+fmtIC(r.ic)+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
+ list.forEach(r=>{const pf=fmtPhone(r.phone);const ph=pf!=='-'?'<a href="tel:'+pf+'" style="color:#6366f1;text-decoration:none">📞'+pf+'</a>':'-';h+='<tr'+(r.blacklisted?' style="background:#fef2f2"':'')+'><td style="font-weight:600">'+(r.blacklisted?'⚫ ':'')+r.name+'</td><td style="font-size:11px;color:#64748b">'+fmtIC(r.ic)+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
  h+='</table></div>';c.innerHTML=h}
 function fltAdmin(){const q=el('flt-q').value.toLowerCase().trim(),st=el('flt-st').value,pos=el('flt-pos').value,meal=el('flt-meal').value;
  renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))||fmtPhone(c.phone).includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)}))}
@@ -431,6 +438,28 @@ function popAdmFlt(){const p=[...new Set(AC.map(c=>c.position).filter(Boolean))]
  el('flt-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('flt-pos').innerHTML+='<option>'+v+'</option>');
  el('flt-meal').innerHTML='<option value="">All Meals</option>';m.forEach(v=>el('flt-meal').innerHTML+='<option>'+v+'</option>')}
 
+// ===== BLACKLIST =====
+async function doBlacklist(){
+  const reason=el('bl-reason').value.trim();if(!reason){alert('Please enter a reason');return}
+  if(!confirm('Blacklist this crew? This cannot be undone easily.'))return;
+  // Find crew details from AC or tag search result
+  const crew=AC.find(cr=>cr.key===AK)||{};
+  try{const r=await api('blacklistCrew',{eventCode:E.c,ic:AI,name:crew.name||'',phone:crew.phone||'',reason});
+    mg('bl-msg',r.message,r.success?'success':'error');if(r.success){el('bl-reason').value='';loadAdmin()}}
+  catch(e){mg('bl-msg','Error: '+e.message,'error')}
+}
+
+async function loadBlacklist(){
+  el('bl-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try{const r=await api('getBlacklist',{});
+    if(!r.success||!r.list.length){el('bl-list').innerHTML='<div class="loading">No blacklisted crew</div>';return}
+    let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Reason</th><th>Date</th><th>Event</th></tr>';
+    r.list.forEach(b=>{h+='<tr><td style="font-weight:600">'+b.name+'</td><td style="font-size:11px">'+fmtIC(b.ic)+'</td><td>'+fmtPhone(b.phone)+'</td><td style="font-size:12px;color:#dc2626">'+b.reason+'</td><td style="font-size:11px">'+b.date+'</td><td style="font-size:11px">'+b.event+'</td></tr>'});
+    h+='</table></div>';el('bl-list').innerHTML=h}
+  catch(e){el('bl-list').innerHTML='<div class="loading">Error loading</div>'}
+}
+
+// ===== 4. Show blacklist warning in crew table =====
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){const s=document.querySelector('.screen.active').id;if(s==='s-home')doVerify();else if(s==='s-crew1')crewLogin();else if(s==='s-clogin')counterLogin();else if(s==='s-alogin')adminLogin()}});
 </script>
 </body>

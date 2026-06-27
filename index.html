@@ -67,13 +67,13 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 
 <!-- HOME -->
 <div id="s-home" class="screen active">
-<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In</h1><p>Event Management System</p></div>
+<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In System</h1><p>Event Management System</p></div>
 <div class="card"><h2>Enter Event Code</h2><input type="text" id="inp-ec" placeholder="Event Code" style="text-transform:uppercase"><div id="err-home" class="alert" style="display:none"></div><button class="btn btn-primary" onclick="doVerify()">Continue</button></div>
 </div>
 
 <!-- ROLE -->
 <div id="s-role" class="screen">
-<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In</h1></div><div id="lbl-role" class="evn"></div>
+<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In System</h1></div><div id="lbl-role" class="evn"></div>
 <div class="card"><h2>Select Your Role</h2><div class="role-grid"><div class="role-btn" onclick="go('crew')"><span class="icon">👤</span>Crew</div><div class="role-btn" onclick="go('counter')"><span class="icon">📋</span>Counter</div><div class="role-btn" onclick="go('admin')"><span class="icon">⚙️</span>Admin</div></div></div>
 <button class="btn btn-outline" onclick="show('s-home')">← Back</button>
 </div>
@@ -86,7 +86,7 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 </div>
 
 <!-- CREW QR -->
-<div id="s-crew2" class="screen"><div class="logo"><h1>✅ Your QR Code</h1></div><div id="crew-cards"></div><button class="btn btn-outline" onclick="show('s-crew1')">← Back</button></div>
+<div id="s-crew2" class="screen"><div class="logo"><h1>✅ Your QR Code</h1></div><div id="lbl-crew2" class="evn"></div><div id="crew-cards"></div><button class="btn btn-outline" onclick="show('s-crew1')">← Back</button></div>
 
 <!-- COUNTER LOGIN -->
 <div id="s-clogin" class="screen">
@@ -266,7 +266,7 @@ r.assignments.forEach((a,i)=>{
  if(r.assignments.length>1)c.innerHTML+='<div class="divider">── Assignment '+(i+1)+'/'+r.assignments.length+' ──</div>';
  c.innerHTML+='<div class="card"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+a.name+'</span></div><div class="info-row"><span class="info-label">IC</span><span class="info-value" style="color:#64748b">'+a.ic+'</span></div><div class="info-row"><span class="info-label">Section</span><span class="info-value">'+a.section+'</span></div><div class="info-row"><span class="info-label">Level</span><span class="info-value">'+a.level+'</span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+a.position+'</span></span></div><div class="info-row"><span class="info-label">T-Shirt</span><span class="info-value">'+(a.tshirtSize||'-')+'</span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(a.status)+'</span></div>'+(a.status==='checked_in'?'<div class="alert alert-success" style="margin-top:8px">Checked in '+a.cin+' · Tag: '+a.tag+'</div>':'')+'</div><div style="text-align:center;margin-bottom:20px"><p style="font-size:13px;color:#64748b;margin-bottom:10px">Show QR for <b>'+a.position+'</b></p><div class="qr-frame"><div id="qr-'+i+'"></div></div></div>';
  setTimeout(()=>{new QRCode(el('qr-'+i),{text:JSON.stringify({ic:a.ic,eventCode:E.c,section:a.section,level:a.level,position:a.position}),width:200,height:200,colorDark:'#1e293b',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H})},100)});
-show('s-crew2')}
+show('s-crew2');el('lbl-crew2').textContent='📅 '+E.n}
 
 // ===== COUNTER =====
 async function counterLogin(){const pw=el('inp-cpw').value.trim();if(!pw)return mg('err-clogin','Enter password','error');mg('err-clogin','Verifying...','info');

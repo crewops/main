@@ -330,7 +330,7 @@ async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').val
  const data={eventCode:E.c,ic,tag,cmt,key:k,clientTime:myTime()};
  try{const r=await api('checkIn',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
   if(r.success){el('f-cin').style.display='none';el('inp-tag').value='';el('inp-cmt').value='';const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=r.time}Tags[tu]=c?c.name:''}}
- catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin='(offline)'}Tags[tu]=c?c.name:'';
+ catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=myTime()+' (offline)'}Tags[tu]=c?c.name:'';
   mg('ci-result','⚡ Saved offline','warn');el('f-cin').style.display='none';el('inp-tag').value='';el('inp-cmt').value=''}
   else mg('ci-result','Server error. Try again.','error')}}
 
@@ -376,9 +376,9 @@ function tagSearch(){const tag=el('inp-dtag').value.trim();if(!tag)return;const 
  }else ct.innerHTML='<div class="alert alert-error">Tag not found</div>'}
 
 async function tagOut(key,ic){
- const data={eventCode:E.c,ic,key};
+ const data={eventCode:E.c,ic,key,clientTime:myTime()};
  try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');tagSearch()}else popup(r.message,'#ef4444')}
- catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
+ catch(e){if(!navigator.onLine){data.clientTime=myTime();addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
 
 // ===== CAMERA (live scanner primary on GitHub Pages) =====
 function startCam(){if(scanner)return;
@@ -428,7 +428,7 @@ async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div 
  el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
  const pl=el('pos-list');pl.innerHTML='';const pos={};AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
  Object.entries(pos).forEach(([p,d])=>{const pct=d.t>0?Math.round(d.i/d.t*100):0;pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+d.i+'/'+d.t+' · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
- popAdmFlt();renderAdm(AC)}
+ popAdmFlt();renderAdm(AC);updateTimestamp();if(arOn)startAR()}
 
 async function toggleCO(){try{const r=await api('toggleCheckout',{eventCode:E.c});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}else{popup(r.message||'Toggle failed','#ef4444')}}catch(e){popup('Error: '+e.message,'#ef4444')}}
 

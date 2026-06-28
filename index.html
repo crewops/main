@@ -221,12 +221,12 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 
 <!-- EXPORT -->
 <div id="s-export" class="screen screen-wide">
-<div class="no-print" style="text-align:center;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print / PDF</button><button class="btn btn-outline btn-sm" onclick="show('s-admin')" style="margin-left:8px">← Back</button></div>
+<div class="no-print" style="text-align:center;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print / PDF</button><button class="btn btn-outline btn-sm" onclick="el('copyright').style.display='block';show('s-admin')" style="margin-left:8px">← Back</button></div>
 <div id="exp-html" style="background:#fff;color:#000;padding:30px;border-radius:12px"></div>
 </div>
 
 <!-- Copyright Footer -->
-<div class="copyright">© 2026 Dream Vitae Management. All rights reserved.</div>
+<div class="copyright no-print" id="copyright">© 2026 Dream Vitae Management. All rights reserved.</div>
 
 <!-- Hidden for scanFile -->
 <div id="qr-tmp" style="display:none"></div>
@@ -338,7 +338,9 @@ async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').val
   else mg('ci-result','Server error. Try again.','error')}}
 
 // Check Out
-async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k,clientTime:myTime()};
+async function doOut(){if(!CO){mg('ci-result','Checkout not enabled. Ask Admin.','error');return}
+ const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k,clientTime:myTime()};
+ mg('ci-result','⏳ Checking out...','info');
  try{const r=await api('checkOut',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
   if(r.success){el('f-cout').style.display='none';const c=findKey(k);if(c){c.status='checked_out';c.cout=r.time}}}
  catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(k);if(c){c.status='checked_out';c.cout='(offline)'}
@@ -379,7 +381,9 @@ function tagSearch(){const tag=el('inp-dtag').value.trim();if(!tag)return;const 
  }else ct.innerHTML='<div class="alert alert-error">Tag not found</div>'}
 
 async function tagOut(key,ic){
+ if(!CO){popup('Checkout not enabled. Ask Admin.','#ef4444');return}
  const data={eventCode:E.c,ic,key,clientTime:myTime()};
+ popup('⏳ Checking out...','#6366f1');
  try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');tagSearch()}else popup(r.message,'#ef4444')}
  catch(e){if(!navigator.onLine){data.clientTime=myTime();addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
 
@@ -463,7 +467,7 @@ async function doExport(){mg('exp-msg','Generating...','info');const r=await api
  let h='<div style="text-align:center;margin-bottom:24px;font-family:Arial"><h1 style="font-size:20px;margin:0">'+r.eventName+'</h1><p style="color:#666;font-size:13px;margin-top:4px">Attendance Report'+(r.eventDate?' · '+new Date(r.eventDate).toLocaleDateString():'')+'</p></div>';
  Object.entries(g).forEach(([p,crew])=>{h+='<h2 style="font-size:15px;margin:20px 0 8px;padding:8px 14px;background:#f5f3ff;color:#6366f1;border-radius:8px;border-left:4px solid #6366f1;font-family:Arial">'+p+' ('+crew.length+')</h2><table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial"><tr style="background:#f8fafc"><th style="border:1px solid #e2e8f0;padding:8px;text-align:center;width:40px">No</th><th style="border:1px solid #e2e8f0;padding:8px">Name</th><th style="border:1px solid #e2e8f0;padding:8px">IC</th><th style="border:1px solid #e2e8f0;padding:8px">Check In</th><th style="border:1px solid #e2e8f0;padding:8px">Check Out</th></tr>';crew.forEach((c,i)=>{h+='<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:center">'+(i+1)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.name+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.ic+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cin)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cout)+'</td></tr>'});h+='</table>'});
  h+='<div style="margin-top:30px;font-size:11px;color:#94a3b8;text-align:center;font-family:Arial">Generated '+new Date().toLocaleString()+'</div>';
- el('exp-html').innerHTML=h;show('s-export')}
+ el('exp-html').innerHTML=h;el('copyright').style.display='none';show('s-export')}
 
 function renderAdm(list){const c=el('admin-tbl');el('flt-sum').textContent='Showing '+list.length;if(!list.length){c.innerHTML='<div class="loading">No crew</div>';return}
  let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Sec</th><th>Lvl</th><th>Position</th><th>Meal</th><th>Tag</th><th>Status</th></tr>';

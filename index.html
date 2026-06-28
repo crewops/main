@@ -246,7 +246,7 @@ function fmtTime(t){if(!t||t==='-')return'-';try{if(t.includes('T')&&t.includes(
 
 // ===== UTILS =====
 function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam()}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();document.querySelector('.copyright').style.display=id==='s-export'?'none':'block'}
 function mg(id,m,t){const e=document.getElementById(id);e.style.display='block';e.className='alert alert-'+t;e.textContent=m}
 function hd(id){document.getElementById(id).style.display='none'}
 function el(id){return document.getElementById(id)}

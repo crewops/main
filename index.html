@@ -430,7 +430,7 @@ async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div 
  Object.entries(pos).forEach(([p,d])=>{const pct=d.t>0?Math.round(d.i/d.t*100):0;pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+d.i+'/'+d.t+' · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
  popAdmFlt();renderAdm(AC)}
 
-async function toggleCO(){const r=await api('toggleCheckout',{eventCode:E.c});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}}
+async function toggleCO(){try{const r=await api('toggleCheckout',{eventCode:E.c});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}else{popup(r.message||'Toggle failed','#ef4444')}}catch(e){popup('Error: '+e.message,'#ef4444')}}
 
 async function adminTagSearch(){const tag=el('inp-atag').value.trim();if(!tag)return;
  try{const r=await api('getCrewByTag',{eventCode:E.c,tag});const c=el('atag-r');c.style.display='block';

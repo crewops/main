@@ -172,13 +172,16 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 <!-- ADMIN DASHBOARD -->
 <div id="s-admin" class="screen screen-wide">
 <div class="logo"><h1>⚙️ Admin Dashboard</h1></div><div id="lbl-admin" class="evn"></div>
-<div class="stats-grid">
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
  <div class="stat-card stat-total"><div class="stat-num" id="st-t">-</div><div class="stat-label">Total</div></div>
- <div class="stat-card stat-in"><div class="stat-num" id="st-i">-</div><div class="stat-label">In</div></div>
+ <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Expected</div></div>
  <div class="stat-card stat-pending"><div class="stat-num" id="st-p">-</div><div class="stat-label">Pending</div></div>
- <div class="stat-card stat-out"><div class="stat-num" id="st-o">-</div><div class="stat-label">Out</div></div>
  <div class="stat-card stat-absent"><div class="stat-num" id="st-a">-</div><div class="stat-label">Absent</div></div>
-  <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active</div></div>
+</div>
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+ <div class="stat-card stat-in"><div class="stat-num" id="st-i">-</div><div class="stat-label">Checked In</div></div>
+ <div class="stat-card" style="background:#fffbeb"><div class="stat-num" style="color:#d97706" id="st-duty">-</div><div class="stat-label">On Duty</div></div>
+ <div class="stat-card stat-out"><div class="stat-num" id="st-o">-</div><div class="stat-label">Checked Out</div></div>
 </div>
 <div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
 <div class="card"><div class="toggle-wrap"><div id="ar-tog" class="toggle on" onclick="toggleAR()"></div><div><div style="font-weight:600">Auto-Refresh</div><div style="font-size:13px;color:#64748b" id="ar-lbl">On — every 30 seconds</div></div></div></div>
@@ -424,11 +427,25 @@ async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg
 async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
  const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
  const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length;
- el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;
+ const duty=AC.filter(c=>c.status==='checked_in').length;
+ el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;el('st-duty').textContent=duty;
  el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
- const pl=el('pos-list');pl.innerHTML='';const pos={};AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
- Object.entries(pos).forEach(([p,d])=>{const pct=d.t>0?Math.round(d.i/d.t*100):0;pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+d.i+'/'+d.t+' · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
- popAdmFlt();renderAdm(AC);updateTimestamp();if(arOn)startAR()}
+ const pl=el('pos-list');pl.innerHTML='';const pos={};AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,o:0,ci:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='checked_out')pos[pp].o++;if(c.status==='checked_in')pos[pp].ci++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
+ Object.entries(pos).forEach(([p,d])=>{
+  let pct,label,barColor;
+  if(CO){
+    // Checkout mode: track who has checked OUT
+    pct=d.t>0?Math.round(d.o/(d.t-d.a)*100):0;
+    label=d.o+'/'+(d.t-d.a)+' checked out · '+d.ci+' still in';
+    barColor='linear-gradient(90deg,#2563eb,#3b82f6)';
+  }else{
+    // Check-in mode: track who has checked IN
+    pct=d.t>0?Math.round(d.i/d.t*100):0;
+    label=d.i+'/'+d.t+' checked in · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'');
+    barColor='linear-gradient(90deg,#6366f1,#8b5cf6)';
+  }
+  pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+label+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
+ popAdmFlt();fltAdmin();updateTimestamp();if(arOn)startAR()}
 
 async function toggleCO(){try{const r=await api('toggleCheckout',{eventCode:E.c});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}else{popup(r.message||'Toggle failed','#ef4444')}}catch(e){popup('Error: '+e.message,'#ef4444')}}
 

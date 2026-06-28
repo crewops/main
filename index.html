@@ -181,6 +181,7 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
   <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active</div></div>
 </div>
 <div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
+<div class="card"><div class="toggle-wrap"><div id="ar-tog" class="toggle on" onclick="toggleAR()"></div><div><div style="font-weight:600">Auto-Refresh</div><div style="font-size:13px;color:#64748b" id="ar-lbl">On — every 30 seconds</div></div></div></div>
 
 <div class="col-h" onclick="tog(this,'cp')"><h2>📊 Position Breakdown</h2><span class="arr">▼</span></div>
 <div id="cp" class="col-b"><div class="card" style="margin-top:0"><div id="pos-list"></div></div></div>
@@ -203,7 +204,7 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 
 <div class="col-h open" onclick="tog(this,'cl')"><h2>📋 Crew List</h2><span class="arr">▼</span></div>
 <div id="cl" class="col-b open"><div class="card" style="margin-top:0">
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;color:#64748b" id="flt-sum"></span><button class="btn btn-outline btn-sm" onclick="loadAdmin()">🔄</button></div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px"><span style="font-size:13px;color:#64748b" id="flt-sum"></span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:#94a3b8" id="last-upd"></span><button class="btn btn-outline btn-sm" onclick="loadAdmin()">🔄</button></div></div>
  <input type="text" id="flt-q" placeholder="Search name / IC / phone..." oninput="fltAdmin()">
  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
   <select id="flt-st" onchange="fltAdmin()" style="flex:1;margin-bottom:0;min-width:90px"><option value="">All Status</option><option value="pending">⏳ Pending</option><option value="checked_in">✅ In</option><option value="checked_out">🔵 Out</option><option value="absent">❌ Absent</option></select>
@@ -264,8 +265,22 @@ async function doVerify(){const c=el('inp-ec').value.trim().toUpperCase();if(!c)
 function go(r){const lbl='📅 '+E.n;if(r==='crew'){el('lbl-crew').textContent=lbl;show('s-crew1')}else if(r==='counter'){el('lbl-clogin').textContent=lbl;show('s-clogin')}else{el('lbl-alogin').textContent=lbl;show('s-alogin')}}
 
 // ===== CREW =====
-async function crewLogin(){const ic=el('inp-ic').value.trim();if(!ic)return mg('err-crew','Enter IC','error');mg('err-crew','Looking up...','info');
-const r=await api('getCrewInfo',{eventCode:E.c,ic});if(!r.success)return mg('err-crew',r.message,'error');hd('err-crew');
+async function loadCrewCache(){
+  if(window.CC&&window.CC.length)return true;
+  try{const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false});
+    if(r.success){window.CC=r.crew;localStorage.setItem('cc_'+E.c,JSON.stringify(r.crew));return true}}
+  catch(e){const cached=localStorage.getItem('cc_'+E.c);if(cached){window.CC=JSON.parse(cached);return true}}
+  return false;
+}
+
+async function crewLogin(){const ic=el('inp-ic').value.trim();if(!ic)return mg('err-crew','Enter IC','error');mg('err-crew','Loading...','info');
+  if(!await loadCrewCache())return mg('err-crew','Cannot load data. Check your connection.','error');
+  // Local search
+  const norm=ic.replace(/[-\s]/g,'');
+  const matches=window.CC.filter(c=>String(c.ic).replace(/[-\s]/g,'')===norm);
+  if(!matches.length)return mg('err-crew','IC not found. Please look for Admin.','error');
+  const r={success:true,assignments:matches.map(a=>({name:a.name,ic:a.ic,section:a.section,level:a.level,position:a.position,tshirtSize:a.tshirt,meal:a.meal,status:a.status,tag:a.tag,cin:a.cin,key:a.key}))};
+  hd('err-crew');
 const c=el('crew-cards');c.innerHTML='';
 r.assignments.forEach((a,i)=>{
  if(r.assignments.length>1)c.innerHTML+='<div class="divider">── Assignment '+(i+1)+'/'+r.assignments.length+' ──</div>';
@@ -465,6 +480,15 @@ async function loadBlacklist(){
 }
 
 // ===== 4. Show blacklist warning in crew table =====
+// ===== AUTO-REFRESH =====
+let arTimer=null,arOn=true;
+function toggleAR(){arOn=!arOn;el('ar-tog').classList.toggle('on',arOn);el('ar-lbl').textContent=arOn?'On — every 30 seconds':'Off';if(arOn)startAR();else stopAR()}
+function startAR(){stopAR();arTimer=setInterval(()=>{if(document.querySelector('.screen.active').id==='s-admin')loadAdmin()},30000)}
+function stopAR(){if(arTimer){clearInterval(arTimer);arTimer=null}}
+
+// Update loadAdmin to show timestamp
+function updateTimestamp(){el('last-upd').textContent='Updated: '+new Date().toLocaleTimeString()}
+
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){const s=document.querySelector('.screen.active').id;if(s==='s-home')doVerify();else if(s==='s-crew1')crewLogin();else if(s==='s-clogin')counterLogin();else if(s==='s-alogin')adminLogin()}});
 </script>
 </body>

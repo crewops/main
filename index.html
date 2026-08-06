@@ -226,14 +226,14 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 
 <script>
 const API='https://script.google.com/macros/s/AKfycbxVXyMn-byyUMFy8nTBMGjEUTahSO9jWav9n7mhWAfrKSOYVmX3nyVEW4cfurAAIcxT-Q/exec';
-let E={c:'',n:''},D=[],Tags={},CO=false,scanner=null,AK='',AI='',AC=[];
+let E={c:'',n:'',ctoken:'',atoken:''},D=[],Tags={},CO=false,scanner=null,AK='',AI='',AC=[];
 
 // IC & phone normalizer
 function fmtIC(ic){const s=String(ic||'').replace(/[-\s]/g,'');if(s.length===12)return s.substring(0,6)+'-'+s.substring(6,8)+'-'+s.substring(8);return s}
 function fmtPhone(ph){let s=String(ph||'').trim();if(!s||s==='0'||s==='null')return'-';if(s.match(/^[1-9]/)&&s.length>=9&&s.length<=10)s='0'+s;return s}
 // Malaysia time helper (UTC+8)
-function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000-d.getTimezoneOffset()*60*1000).toISOString().replace('T',' ').substring(0,19)}
-function fmtTime(t){if(!t||t==='-')return'-';try{if(t.includes('T')&&t.includes('Z')){const d=new Date(t);d.setHours(d.getHours()+8);return'D: '+d.toISOString().substring(0,10)+' T: '+d.toISOString().substring(11,19)}if(t.includes('(offline)'))return t;return t}catch(e){return t}}
+function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000).toISOString().replace('T',' ').substring(0,19)}
+function fmtTime(t){if(!t||t==='-')return'-';return t}
 
 // ===== UTILS =====
 function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
@@ -271,11 +271,11 @@ show('s-crew2')}
 // ===== COUNTER =====
 async function counterLogin(){const pw=el('inp-cpw').value.trim();if(!pw)return mg('err-clogin','Enter password','error');mg('err-clogin','Verifying...','info');
 const r=await api('verifyCounterPassword',{eventCode:E.c,password:pw});if(!r.success)return mg('err-clogin',r.message,'error');
-hd('err-clogin');el('lbl-counter').textContent='📅 '+E.n;show('s-counter');await loadData();startCam();showQ()}
+E.ctoken=r.token;hd('err-clogin');el('lbl-counter').textContent='📅 '+E.n;show('s-counter');await loadData();startCam();showQ()}
 
 async function loadData(){
- try{const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false});if(r.success){D=r.crew;Tags=r.usedTags;CO=r.checkoutEnabled;
-   localStorage.setItem('dc_'+E.c,JSON.stringify({d:D,t:Tags,co:CO}));populateDE()}}
+ try{const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false,token:E.ctoken});if(r.success){D=r.crew;Tags=r.usedTags;CO=r.checkoutEnabled;
+   localStorage.setItem('dc_'+E.c,JSON.stringify({d:D,t:Tags,co:CO}));populateDE()}else if(r.message)mg('scan-msg',r.message,'error')}
  catch(e){const c=localStorage.getItem('dc_'+E.c);if(c){const j=JSON.parse(c);D=j.d;Tags=j.t||{};CO=j.co;populateDE();mg('scan-msg','⚡ Offline mode','warn')}}}
 
 function findIC(ic){const n=String(ic).replace(/[-\s]/g,'');return D.filter(c=>String(c.ic).replace(/[-\s]/g,'')===n)}
@@ -308,7 +308,7 @@ async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').val
  const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,tu=tag.toUpperCase();
  if(Tags[tu]){mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error');return}
  const btn=el('btn-cin');if(btn.disabled)return;btn.disabled=true;const oldTxt=btn.textContent;btn.textContent='Checking in...';
- const data={eventCode:E.c,ic,tag,cmt,key:k,clientTime:myTime()};
+ const data={eventCode:E.c,ic,tag,cmt,key:k,clientTime:myTime(),token:E.ctoken};
  try{const r=await api('checkIn',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
   if(r.success){el('f-cin').style.display='none';el('inp-tag').value='';el('inp-cmt').value='';const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=r.time}Tags[tu]=c?c.name:''}}
  catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin='(offline)'}Tags[tu]=c?c.name:'';
@@ -317,7 +317,7 @@ async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').val
  finally{btn.disabled=false;btn.textContent=oldTxt}}
 
 // Check Out
-async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k,clientTime:myTime()};
+async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k,clientTime:myTime(),token:E.ctoken};
  const btn=el('btn-cout');if(btn.disabled)return;btn.disabled=true;const oldTxt=btn.textContent;btn.textContent='Checking out...';
  try{const r=await api('checkOut',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
   if(r.success){el('f-cout').style.display='none';const c=findKey(k);if(c){c.status='checked_out';c.cout=r.time}}}
@@ -330,8 +330,9 @@ async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,d
 async function doCmt(role){const inp=role==='admin'?'adm-ncmt':'inp-ncmt',res=role==='admin'?'adm-cmsg':'ci-result';
  const comment=el(inp).value.trim();if(!comment){alert('Write comment');return}
  const k=role==='admin'?AK:el('cinfo').dataset.k,ic=role==='admin'?AI:el('cinfo').dataset.ic;
- try{const r=await api('addComment',{eventCode:E.c,ic,comment,key:k});mg(res,r.message,r.success?'success':'error');if(r.success)el(inp).value=''}
- catch(e){if(!navigator.onLine){addQ('addComment',{eventCode:E.c,ic,comment,key:k});mg(res,'⚡ Saved offline','warn');el(inp).value=''}else mg(res,'Server error','error')}}
+ const tok=role==='admin'?E.atoken:E.ctoken;
+ try{const r=await api('addComment',{eventCode:E.c,ic,comment,key:k,token:tok});mg(res,r.message,r.success?'success':'error');if(r.success)el(inp).value=''}
+ catch(e){if(!navigator.onLine){addQ('addComment',{eventCode:E.c,ic,comment,key:k,token:tok});mg(res,'⚡ Saved offline','warn');el(inp).value=''}else mg(res,'Server error','error')}}
 
 function counterBack(){
   // If showing crew info, go back to search
@@ -360,7 +361,7 @@ function tagSearch(){const tag=el('inp-dtag').value.trim();if(!tag)return;const 
  }else ct.innerHTML='<div class="alert alert-error">Tag not found</div>'}
 
 async function tagOut(key,ic){
- const data={eventCode:E.c,ic,key};
+ const data={eventCode:E.c,ic,key,clientTime:myTime(),token:E.ctoken};
  try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');tagSearch()}else popup(r.message,'#ef4444')}
  catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
 
@@ -403,10 +404,10 @@ function photoScan(inp){if(!inp.files||!inp.files[0])return;mg('scan-msg','📸 
    img.src=ev.target.result};rd.readAsDataURL(f)})}
 
 // ===== ADMIN =====
-async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg('err-alogin','Enter password','error');mg('err-alogin','Verifying...','info');const r=await api('verifyAdminPassword',{eventCode:E.c,password:pw});if(r.success){hd('err-alogin');el('lbl-admin').textContent='📅 '+E.n;show('s-admin');loadAdmin()}else mg('err-alogin',r.message,'error')}
+async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg('err-alogin','Enter password','error');mg('err-alogin','Verifying...','info');const r=await api('verifyAdminPassword',{eventCode:E.c,password:pw});if(r.success){E.atoken=r.token;hd('err-alogin');el('lbl-admin').textContent='📅 '+E.n;show('s-admin');loadAdmin()}else mg('err-alogin',r.message,'error')}
 
 async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
- const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
+ const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true,token:E.atoken});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
  const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length;
  el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;
  el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
@@ -414,18 +415,18 @@ async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div 
  Object.entries(pos).forEach(([p,d])=>{const pct=d.t>0?Math.round(d.i/d.t*100):0;pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+d.i+'/'+d.t+' · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
  popAdmFlt();renderAdm(AC)}
 
-async function toggleCO(){const r=await api('toggleCheckout',{eventCode:E.c});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}}
+async function toggleCO(){const r=await api('toggleCheckout',{eventCode:E.c,token:E.atoken});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}}
 
 async function adminTagSearch(){const tag=el('inp-atag').value.trim();if(!tag)return;
- try{const r=await api('getCrewByTag',{eventCode:E.c,tag});const c=el('atag-r');c.style.display='block';
+ try{const r=await api('getCrewByTag',{eventCode:E.c,tag,token:E.atoken});const c=el('atag-r');c.style.display='block';
   if(r.success){AK=r.key;AI=r.ic;c.innerHTML='<div style="margin-top:12px"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+r.name+'</span></div><div class="info-row"><span class="info-label">IC</span><span class="info-value">'+r.ic+'</span></div><div class="info-row"><span class="info-label">Phone</span><span class="info-value"><a href="tel:'+r.phone+'" style="color:#6366f1">📞 '+(r.phone||'-')+'</a></span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+r.position+'</span></span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(r.status)+'</span></div>'+(r.cmt?'<div class="comment-box" style="margin-top:8px">📝 '+r.cmt+'</div>':'')+'<textarea id="adm-ncmt" placeholder="Comment..." style="margin-top:8px"></textarea><button class="btn btn-primary" onclick="doCmt(\'admin\')" style="margin-top:4px">💾 Save</button><div id="adm-cmsg" class="alert" style="display:none;margin-top:8px"></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0"><input type="text" id="bl-reason" placeholder="Blacklist reason..."><button class="btn btn-danger btn-sm" onclick="doBlacklist()" style="margin-top:4px">⚫ Add to Blacklist</button><div id="bl-msg" class="alert" style="display:none;margin-top:8px"></div></div></div>'}
   else c.innerHTML='<div class="alert alert-error" style="margin-top:8px">'+r.message+'</div>'}catch(e){}}
 
 async function doReplace(){const o=el('r-oic').value.trim(),n=el('r-nn').value.trim(),ni=el('r-nic').value.trim(),np=el('r-nph').value.trim(),nt=el('r-nts').value.trim(),rf=el('r-ref').value.trim();
  if(!o||!n||!ni||!rf)return mg('r-msg','Fill Original IC, Name, IC & Referral','error');mg('r-msg','Processing...','info');
- const r=await api('replaceCrew',{eventCode:E.c,originalIC:o,replacementName:n,replacementIC:ni,replacementPhone:np,replacementTshirt:nt,referral:rf});mg('r-msg',r.message,r.success?'success':'error');if(r.success){['r-oic','r-nn','r-nic','r-nph','r-nts','r-ref'].forEach(id=>el(id).value='');loadAdmin()}}
+ const r=await api('replaceCrew',{eventCode:E.c,originalIC:o,replacementName:n,replacementIC:ni,replacementPhone:np,replacementTshirt:nt,referral:rf,token:E.atoken});mg('r-msg',r.message,r.success?'success':'error');if(r.success){['r-oic','r-nn','r-nic','r-nph','r-nts','r-ref'].forEach(id=>el(id).value='');loadAdmin()}}
 
-async function doExport(){mg('exp-msg','Generating...','info');const r=await api('getExportData',{eventCode:E.c});if(!r.success)return mg('exp-msg',r.message,'error');hd('exp-msg');
+async function doExport(){mg('exp-msg','Generating...','info');const r=await api('getExportData',{eventCode:E.c,token:E.atoken});if(!r.success)return mg('exp-msg',r.message,'error');hd('exp-msg');
  const g={};r.crewList.forEach(c=>{if(!g[c.position])g[c.position]=[];g[c.position].push(c)});
  let h='<div style="text-align:center;margin-bottom:24px;font-family:Arial"><h1 style="font-size:20px;margin:0">'+r.eventName+'</h1><p style="color:#666;font-size:13px;margin-top:4px">Attendance Report'+(r.eventDate?' · '+new Date(r.eventDate).toLocaleDateString():'')+'</p></div>';
  Object.entries(g).forEach(([p,crew])=>{h+='<h2 style="font-size:15px;margin:20px 0 8px;padding:8px 14px;background:#f5f3ff;color:#6366f1;border-radius:8px;border-left:4px solid #6366f1;font-family:Arial">'+p+' ('+crew.length+')</h2><table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial"><tr style="background:#f8fafc"><th style="border:1px solid #e2e8f0;padding:8px;text-align:center;width:40px">No</th><th style="border:1px solid #e2e8f0;padding:8px">Name</th><th style="border:1px solid #e2e8f0;padding:8px">IC</th><th style="border:1px solid #e2e8f0;padding:8px">Check In</th><th style="border:1px solid #e2e8f0;padding:8px">Check Out</th></tr>';crew.forEach((c,i)=>{h+='<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:center">'+(i+1)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.name+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.ic+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cin)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cout)+'</td></tr>'});h+='</table>'});
@@ -448,14 +449,14 @@ async function doBlacklist(){
   if(!confirm('Blacklist this crew? This cannot be undone easily.'))return;
   // Find crew details from AC or tag search result
   const crew=AC.find(cr=>cr.key===AK)||{};
-  try{const r=await api('blacklistCrew',{eventCode:E.c,ic:AI,name:crew.name||'',phone:crew.phone||'',reason});
+  try{const r=await api('blacklistCrew',{eventCode:E.c,ic:AI,name:crew.name||'',phone:crew.phone||'',reason,token:E.atoken});
     mg('bl-msg',r.message,r.success?'success':'error');if(r.success){el('bl-reason').value='';loadAdmin()}}
   catch(e){mg('bl-msg','Error: '+e.message,'error')}
 }
 
 async function loadBlacklist(){
   el('bl-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  try{const r=await api('getBlacklist',{});
+  try{const r=await api('getBlacklist',{eventCode:E.c,token:E.atoken});
     if(!r.success||!r.list.length){el('bl-list').innerHTML='<div class="loading">No blacklisted crew</div>';return}
     let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Reason</th><th>Date</th><th>Event</th></tr>';
     r.list.forEach(b=>{h+='<tr><td style="font-weight:600">'+b.name+'</td><td style="font-size:11px">'+fmtIC(b.ic)+'</td><td>'+fmtPhone(b.phone)+'</td><td style="font-size:12px;color:#dc2626">'+b.reason+'</td><td style="font-size:11px">'+b.date+'</td><td style="font-size:11px">'+b.event+'</td></tr>'});

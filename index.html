@@ -30,7 +30,7 @@ textarea{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #e2e8f
 .alert{padding:14px 16px;border-radius:12px;margin-bottom:12px;font-size:14px}
 .alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}.alert-success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
 .alert-info{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}.alert-warn{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
-.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
 .stat-card{background:#fff;border-radius:12px;padding:14px 6px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .stat-num{font-size:24px;font-weight:700}.stat-label{font-size:10px;color:#94a3b8;margin-top:2px;text-transform:uppercase}
 .stat-pending .stat-num{color:#d97706}.stat-in .stat-num{color:#059669}.stat-out .stat-num{color:#2563eb}.stat-total .stat-num{color:#6366f1}.stat-absent .stat-num{color:#dc2626}
@@ -176,12 +176,13 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
  <div class="stat-card stat-pending"><div class="stat-num" id="st-p">-</div><div class="stat-label">Pending</div></div>
  <div class="stat-card stat-out"><div class="stat-num" id="st-o">-</div><div class="stat-label">Out</div></div>
  <div class="stat-card stat-absent"><div class="stat-num" id="st-a">-</div><div class="stat-label">Absent</div></div>
-  <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active</div></div>
+ <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active Crew</div></div>
+ <div class="stat-card" style="background:#eff6ff"><div class="stat-num" style="color:#2563eb" id="st-duty">-</div><div class="stat-label">On Duty</div></div>
 </div>
 <div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
 
 <div class="col-h" onclick="tog(this,'cp')"><h2>📊 Position Breakdown</h2><span class="arr">▼</span></div>
-<div id="cp" class="col-b"><div class="card" style="margin-top:0"><div id="pos-list"></div></div></div>
+<div id="cp" class="col-b"><div class="card" style="margin-top:0"><div class="tab-bar" style="margin-bottom:12px"><button class="tab-btn active" id="pv-in" onclick="posView('in')">✅ Check-In</button><button class="tab-btn" id="pv-out" onclick="posView('out')">🔄 Check-Out</button></div><div id="pos-list"></div></div></div>
 
 <div class="col-h" onclick="tog(this,'ct')"><h2>🏷️ Tag Search / Comment</h2><span class="arr">▼</span></div>
 <div id="ct" class="col-b"><div class="card" style="margin-top:0"><div style="display:flex;gap:8px"><input type="text" id="inp-atag" placeholder="Tag" style="flex:1"><button class="btn btn-primary btn-sm" style="padding:14px 20px" onclick="adminTagSearch()">Search</button></div><div id="atag-r" style="display:none"></div></div></div>
@@ -237,7 +238,7 @@ function fmtTime(t){if(!t||t==='-')return'-';return t}
 
 // ===== UTILS =====
 function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam()}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();if(id==='s-admin')startAdminRefresh();else stopAdminRefresh()}
 function mg(id,m,t){const e=document.getElementById(id);e.style.display='block';e.className='alert alert-'+t;e.textContent=m}
 function hd(id){document.getElementById(id).style.display='none'}
 function el(id){return document.getElementById(id)}
@@ -406,14 +407,34 @@ function photoScan(inp){if(!inp.files||!inp.files[0])return;mg('scan-msg','📸 
 // ===== ADMIN =====
 async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg('err-alogin','Enter password','error');mg('err-alogin','Verifying...','info');const r=await api('verifyAdminPassword',{eventCode:E.c,password:pw});if(r.success){E.atoken=r.token;hd('err-alogin');el('lbl-admin').textContent='📅 '+E.n;show('s-admin');loadAdmin()}else mg('err-alogin',r.message,'error')}
 
-async function loadAdmin(){el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
+async function loadAdmin(){
+ const prevQ=el('flt-q').value,prevSt=el('flt-st').value,prevPos=el('flt-pos').value,prevMeal=el('flt-meal').value;
+ el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
  const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true,token:E.atoken});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
- const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length;
- el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;
+ const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length,act=AC.filter(c=>c.status==='checked_in').length;
+ el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;el('st-duty').textContent=act;
  el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
- const pl=el('pos-list');pl.innerHTML='';const pos={};AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
- Object.entries(pos).forEach(([p,d])=>{const pct=d.t>0?Math.round(d.i/d.t*100):0;pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+d.i+'/'+d.t+' · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:#6366f1;margin-left:12px">'+pct+'%</div></div>'});
- popAdmFlt();renderAdm(AC)}
+ renderPos();
+ popAdmFlt();
+ el('flt-q').value=prevQ;el('flt-st').value=prevSt;
+ if([...el('flt-pos').options].some(o=>o.value===prevPos))el('flt-pos').value=prevPos;
+ if([...el('flt-meal').options].some(o=>o.value===prevMeal))el('flt-meal').value=prevMeal;
+ fltAdmin()}
+
+let PV='in';
+function posView(v){PV=v;el('pv-in').classList.toggle('active',v==='in');el('pv-out').classList.toggle('active',v==='out');renderPos()}
+function renderPos(){
+ const pl=el('pos-list');pl.innerHTML='';const pos={};
+ AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,o:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='checked_out')pos[pp].o++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
+ Object.entries(pos).forEach(([p,d])=>{
+  let num,den,pct,sub,color;
+  if(PV==='in'){num=d.i;den=d.t;pct=den>0?Math.round(num/den*100):0;sub=num+'/'+den+' arrived · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'');color='#6366f1'}
+  else{num=d.o;den=d.i;pct=den>0?Math.round(num/den*100):0;const remain=d.i-d.o;sub=num+'/'+den+' checked out'+(remain?' · '+remain+' still onsite':' · all clear')+(d.p?' · '+d.p+' not arrived':'');color='#2563eb'}
+  pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+sub+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+color+'"></div></div></div><div style="font-size:18px;font-weight:700;color:'+color+';margin-left:12px">'+pct+'%</div></div>'})}
+
+let adminRefreshTimer=null;
+function startAdminRefresh(){stopAdminRefresh();adminRefreshTimer=setInterval(()=>{if(!document.hidden)loadAdmin()},30000)}
+function stopAdminRefresh(){if(adminRefreshTimer){clearInterval(adminRefreshTimer);adminRefreshTimer=null}}
 
 async function toggleCO(){const r=await api('toggleCheckout',{eventCode:E.c,token:E.atoken});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}}
 

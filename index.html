@@ -1,492 +1,223 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Crew Check-In</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;font-size:16px}
-.screen{display:none;padding:16px;max-width:480px;margin:0 auto}.screen.active{display:block}.screen-wide.active{display:block;max-width:900px}
-.logo{text-align:center;padding:20px 0 14px}.logo h1{font-size:20px;font-weight:700}.logo .accent{color:#6366f1}.logo p{font-size:13px;color:#64748b;margin-top:4px}
-.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.card h2{font-size:15px;font-weight:600;margin-bottom:12px;color:#334155}
-input,select{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;color:#1e293b;font-size:16px;margin-bottom:12px;outline:none;-webkit-appearance:none}
-input:focus,select:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-textarea{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;color:#1e293b;font-size:15px;margin-bottom:12px;outline:none;resize:vertical;min-height:50px}
-.btn{width:100%;padding:16px;border-radius:12px;border:none;font-size:16px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.btn-primary{background:#6366f1;color:#fff}.btn-success{background:#10b981;color:#fff}.btn-danger{background:#ef4444;color:#fff}.btn-yellow{background:#f59e0b;color:#fff}
-.btn-outline{background:#fff;color:#64748b;border:1px solid #e2e8f0;margin-top:8px}.btn-sm{width:auto;padding:10px 18px;font-size:14px}
-.role-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
-.role-btn{padding:22px 8px;border-radius:14px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:13px;font-weight:600;cursor:pointer;text-align:center}
-.role-btn:active{border-color:#6366f1;color:#6366f1;background:#f5f3ff}
-.role-btn .icon{font-size:30px;display:block;margin-bottom:8px}
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f1f5f9}.info-row:last-child{border-bottom:none}
-.info-label{font-size:13px;color:#94a3b8}.info-value{font-size:15px;font-weight:600;color:#1e293b}
-.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
-.badge-pending{background:#fef9c3;color:#a16207}.badge-in{background:#d1fae5;color:#047857}.badge-out{background:#dbeafe;color:#1d4ed8}.badge-absent{background:#fce7f3;color:#be185d}
-.alert{padding:14px 16px;border-radius:12px;margin-bottom:12px;font-size:14px}
-.alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}.alert-success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
-.alert-info{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}.alert-warn{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
-.stat-card{background:#fff;border-radius:12px;padding:14px 6px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.stat-num{font-size:24px;font-weight:700}.stat-label{font-size:10px;color:#94a3b8;margin-top:2px;text-transform:uppercase}
-.stat-pending .stat-num{color:#d97706}.stat-in .stat-num{color:#059669}.stat-out .stat-num{color:#2563eb}.stat-total .stat-num{color:#6366f1}.stat-absent .stat-num{color:#dc2626}
-.progress-bar{width:100%;height:6px;background:#f1f5f9;border-radius:3px;margin-top:4px}.progress-fill{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:3px}
-.section-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
-.tab-bar{display:flex;gap:8px;margin-bottom:14px}.tab-btn{flex:1;padding:12px 8px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#94a3b8;font-size:14px;font-weight:600;cursor:pointer;text-align:center}
-.tab-btn.active{background:#6366f1;color:#fff;border-color:#6366f1}
-.loading{text-align:center;color:#94a3b8;padding:20px}.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:sp .8s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.evn{background:#f5f3ff;border:1px solid #e0e7ff;border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:center;font-size:14px;color:#6366f1;font-weight:600}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:#f8fafc;padding:10px 8px;text-align:left;color:#64748b;font-weight:600;position:sticky;top:0;border-bottom:2px solid #e2e8f0}
-td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fafc}
-.comment-box{background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:13px;color:#64748b;margin-bottom:8px;border:1px solid #e2e8f0;word-break:break-word}
-.col-h{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:14px 18px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:8px;user-select:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.col-h h2{margin:0;font-size:14px;color:#334155}.col-h .arr{color:#94a3b8;font-size:12px;transition:transform .2s}
-.col-h.open .arr{transform:rotate(180deg)}.col-b{display:none;margin-bottom:12px}.col-b.open{display:block}
-.qr-frame{display:inline-block;padding:16px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);border:1px solid #e2e8f0}
-.divider{text-align:center;padding:14px 0;color:#6366f1;font-weight:700;font-size:14px;border-top:2px dashed #e2e8f0;margin-top:8px}
-.pick{border:2px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;background:#fff}.pick:active{border-color:#6366f1;background:#f5f3ff}.pick.off{opacity:.5;pointer-events:none}
-.crew-item{padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:15px;display:flex;justify-content:space-between;align-items:center}
-.crew-item .n{font-weight:600}.crew-item .m{font-size:12px;color:#94a3b8}
-.toggle-wrap{display:flex;align-items:center;gap:12px}.toggle{width:50px;height:28px;background:#cbd5e1;border-radius:14px;position:relative;cursor:pointer}.toggle.on{background:#10b981}
-.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.1)}.toggle.on::after{left:25px}
-.pos{background:#f5f3ff;color:#6366f1;padding:3px 10px;border-radius:6px;font-weight:600;font-size:13px}
-#qr-reader{width:100%}#qr-reader video{border-radius:12px!important}
-.popup{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:16px 28px;border-radius:14px;font-size:16px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:200;display:none;animation:popIn .3s ease}
-@keyframes popIn{0%{opacity:0;transform:translateX(-50%) translateY(-20px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
-@media(max-width:600px){.stats-grid{grid-template-columns:repeat(3,1fr)}.stat-num{font-size:20px}table{font-size:12px}th,td{padding:8px 4px}.screen-wide.active{max-width:100%;padding:12px}}
-@media print{body{background:#fff}.no-print{display:none!important}}
-</style>
-</head>
-<body>
+// ============================================
+// CREW CHECK-IN SYSTEM v8
+// ============================================
+const SPREADSHEET_ID = '1Ro1_Z5vfwOPvyaXG03I6iBSO9Lv0Mun_cOssltdTJx0';
+const R={TS:0,EVT:1,IC:2,NAME:3,SEC:4,LVL:5,POS:6,TAG:7,CIN:8,COUT:9,CMT:10,STATUS:11,REPBY:12,REF:13};
+const W={TAG:8,CIN:9,COUT:10,CMT:11,STATUS:12,REPBY:13,REF:14};
+const TZ='Asia/Kuala_Lumpur';
 
-<!-- HOME -->
-<div id="s-home" class="screen active">
-<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In</h1><p>Event Management System</p></div>
-<div class="card"><h2>Enter Event Code</h2><input type="text" id="inp-ec" placeholder="Event Code" style="text-transform:uppercase"><div id="err-home" class="alert" style="display:none"></div><button class="btn btn-primary" onclick="doVerify()">Continue</button></div>
-</div>
-
-<!-- ROLE -->
-<div id="s-role" class="screen">
-<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In</h1></div><div id="lbl-role" class="evn"></div>
-<div class="card"><h2>Select Your Role</h2><div class="role-grid"><div class="role-btn" onclick="go('crew')"><span class="icon">👤</span>Crew</div><div class="role-btn" onclick="go('counter')"><span class="icon">📋</span>Counter</div><div class="role-btn" onclick="go('admin')"><span class="icon">⚙️</span>Admin</div></div></div>
-<button class="btn btn-outline" onclick="show('s-home')">← Back</button>
-</div>
-
-<!-- CREW LOGIN -->
-<div id="s-crew1" class="screen">
-<div class="logo"><h1>👤 Crew</h1></div><div id="lbl-crew" class="evn"></div>
-<div class="card"><h2>Enter Your IC Number</h2><input type="text" id="inp-ic" placeholder="e.g. 901234567890"><div id="err-crew" class="alert" style="display:none"></div><button class="btn btn-primary" onclick="crewLogin()">Get My QR Code</button></div>
-<button class="btn btn-outline" onclick="show('s-role')">← Back</button>
-</div>
-
-<!-- CREW QR -->
-<div id="s-crew2" class="screen"><div class="logo"><h1>✅ Your QR Code</h1></div><div id="crew-cards"></div><button class="btn btn-outline" onclick="show('s-crew1')">← Back</button></div>
-
-<!-- COUNTER LOGIN -->
-<div id="s-clogin" class="screen">
-<div class="logo"><h1>📋 Counter</h1></div><div id="lbl-clogin" class="evn"></div>
-<div class="card"><h2>Counter Password</h2><input type="password" id="inp-cpw" placeholder="Password"><div id="err-clogin" class="alert" style="display:none"></div><button class="btn btn-primary" onclick="counterLogin()">Login</button></div>
-<button class="btn btn-outline" onclick="show('s-role')">← Back</button>
-</div>
-
-<!-- COUNTER PANEL -->
-<div id="s-counter" class="screen">
-<div class="logo"><h1>📋 Counter</h1></div><div id="lbl-counter" class="evn"></div>
-<div class="tab-bar"><button class="tab-btn active" id="m-pre" onclick="cMode('pre')">📝 Pre-Event</button><button class="tab-btn" id="m-dur" onclick="cMode('dur')">🎬 During Event</button></div>
-
-<!-- PRE-EVENT -->
-<div id="mode-pre">
- <div class="tab-bar"><button class="tab-btn active" id="t-scan" onclick="cTab('scan')">📷 Scan</button><button class="tab-btn" id="t-ic" onclick="cTab('ic')">⌨️ IC</button></div>
-
- <div id="tab-scan"><div class="card">
-  <div id="qr-reader" style="border-radius:12px;overflow:hidden"></div>
-  <div id="scan-msg" class="alert alert-info" style="margin-top:10px">Starting camera...</div>
-  <div id="photo-backup" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;text-align:center">
-   <p style="font-size:13px;color:#64748b;margin-bottom:8px">Camera not working? Use photo mode:</p>
-   <input type="file" id="qr-file" accept="image/jpeg,image/png" capture="environment" style="display:none" onchange="photoScan(this)">
-   <button class="btn btn-outline" onclick="document.getElementById('qr-file').click()" style="font-size:14px">📷 Take Photo Instead</button>
-  </div>
- </div></div>
-
- <div id="tab-ic" style="display:none"><div class="card"><h2>Search by IC</h2><input type="text" id="inp-mic" placeholder="IC number"><button class="btn btn-primary" onclick="searchIC()">Search</button></div></div>
-
- <!-- Multi-pick -->
- <div id="multi" style="display:none"><div class="card"><h2>Multiple Assignments</h2><p style="font-size:13px;color:#64748b;margin-bottom:12px">Select which assignment:</p><div id="multi-list"></div></div></div>
-
- <!-- Crew info card -->
- <div id="cinfo" style="display:none">
-  <div class="card"><h2>Crew Info</h2>
-   <div class="info-row"><span class="info-label">Name</span><span class="info-value" id="ci-name"></span></div>
-   <div class="info-row"><span class="info-label">IC</span><span class="info-value" id="ci-ic"></span></div>
-   <div class="info-row"><span class="info-label">Section</span><span class="info-value" id="ci-sec"></span></div>
-   <div class="info-row"><span class="info-label">Level</span><span class="info-value" id="ci-lvl"></span></div>
-   <div class="info-row"><span class="info-label">Position</span><span class="info-value" id="ci-pos"></span></div>
-   <div class="info-row"><span class="info-label">T-Shirt</span><span class="info-value" id="ci-ts"></span></div>
-   <div class="info-row"><span class="info-label">Meal</span><span class="info-value" id="ci-meal"></span></div>
-   <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="ci-st"></span></div>
-  </div>
-  <div class="card" id="f-cin"><h2>✅ Check In</h2><input type="text" id="inp-tag" placeholder="Tag Number"><input type="text" id="inp-cmt" placeholder="Comment (optional)"><button id="btn-cin" class="btn btn-success" onclick="doIn()">Confirm Check In</button></div>
-  <div class="card" id="f-cout" style="display:none"><h2>🔄 Check Out</h2><p style="font-size:13px;color:#64748b;margin-bottom:12px">Confirm returned: tag, wristband & tools</p><button id="btn-cout" class="btn btn-yellow" onclick="doOut()">Confirm Check Out</button></div>
-  <div class="card" id="f-cmt" style="display:none"><h2>💬 Comment</h2><div id="ci-oldcmt" class="comment-box" style="display:none"></div><textarea id="inp-ncmt" placeholder="Write comment..."></textarea><button class="btn btn-primary" onclick="doCmt('counter')">Save</button></div>
-  <div id="ci-result" class="alert" style="display:none"></div>
-  <button class="btn btn-outline" onclick="nextCrew()">↩ Next Crew</button>
- </div>
-</div>
-
-<!-- DURING EVENT -->
-<div id="mode-dur" style="display:none">
- <div class="tab-bar"><button class="tab-btn active" id="dt-find" onclick="dTab('find')">🔍 Find Crew</button><button class="tab-btn" id="dt-tag" onclick="dTab('tag')">🏷️ Tag</button></div>
- <div id="dtab-find"><div class="card"><h2>Filter</h2><select id="df-pos" onchange="filterDE()"><option value="">All Positions</option></select><select id="df-sec" onchange="filterDE()"><option value="">All Sections</option></select><select id="df-lvl" onchange="filterDE()"><option value="">All Levels</option></select></div><div class="card"><div id="de-list"><div class="loading">Select filters</div></div></div></div>
- <div id="dtab-tag" style="display:none">
-  <div class="card"><h2>Search by Tag</h2><input type="text" id="inp-dtag" placeholder="Tag Number"><button class="btn btn-primary" onclick="tagSearch()">Search</button></div>
-  <div id="tag-result" style="display:none"></div>
- </div>
-</div>
-
-<!-- Offline sync card -->
-<div id="sync-card" style="display:none"><div class="card" style="background:#fffbeb;border:2px solid #f59e0b;text-align:center;padding:24px">
- <div style="font-size:28px;margin-bottom:8px">⚡</div>
- <div style="font-size:18px;font-weight:700;color:#92400e"><span id="sync-n">0</span> records pending</div>
- <div style="font-size:13px;color:#b45309;margin-bottom:16px">Will auto-sync when connected</div>
- <button class="btn btn-yellow" onclick="doSync()" style="font-size:16px;padding:16px">🔄 Sync Now</button>
-</div></div>
-
-<button class="btn btn-outline" onclick="counterBack()">← Back</button>
-</div>
-
-<!-- ADMIN LOGIN -->
-<div id="s-alogin" class="screen">
-<div class="logo"><h1>⚙️ Admin</h1></div><div id="lbl-alogin" class="evn"></div>
-<div class="card"><h2>Admin Password</h2><input type="password" id="inp-apw" placeholder="Password"><div id="err-alogin" class="alert" style="display:none"></div><button class="btn btn-primary" onclick="adminLogin()">Login</button></div>
-<button class="btn btn-outline" onclick="show('s-role')">← Back</button>
-</div>
-
-<!-- ADMIN DASHBOARD -->
-<div id="s-admin" class="screen screen-wide">
-<div class="logo"><h1>⚙️ Admin Dashboard</h1></div><div id="lbl-admin" class="evn"></div>
-<div class="stats-grid">
- <div class="stat-card stat-total"><div class="stat-num" id="st-t">-</div><div class="stat-label">Total</div></div>
- <div class="stat-card stat-in"><div class="stat-num" id="st-i">-</div><div class="stat-label">In</div></div>
- <div class="stat-card stat-pending"><div class="stat-num" id="st-p">-</div><div class="stat-label">Pending</div></div>
- <div class="stat-card stat-out"><div class="stat-num" id="st-o">-</div><div class="stat-label">Out</div></div>
- <div class="stat-card stat-absent"><div class="stat-num" id="st-a">-</div><div class="stat-label">Absent</div></div>
- <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active Crew</div></div>
- <div class="stat-card" style="background:#eff6ff"><div class="stat-num" style="color:#2563eb" id="st-duty">-</div><div class="stat-label">On Duty</div></div>
-</div>
-<div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
-
-<div class="col-h" onclick="tog(this,'cp')"><h2>📊 Position Breakdown</h2><span class="arr">▼</span></div>
-<div id="cp" class="col-b"><div class="card" style="margin-top:0"><div class="tab-bar" style="margin-bottom:12px"><button class="tab-btn active" id="pv-in" onclick="posView('in')">✅ Check-In</button><button class="tab-btn" id="pv-out" onclick="posView('out')">🔄 Check-Out</button></div><div id="pos-list"></div></div></div>
-
-<div class="col-h" onclick="tog(this,'ct')"><h2>🏷️ Tag Search / Comment</h2><span class="arr">▼</span></div>
-<div id="ct" class="col-b"><div class="card" style="margin-top:0"><div style="display:flex;gap:8px"><input type="text" id="inp-atag" placeholder="Tag" style="flex:1"><button class="btn btn-primary btn-sm" style="padding:14px 20px" onclick="adminTagSearch()">Search</button></div><div id="atag-r" style="display:none"></div></div></div>
-
-<div class="col-h" onclick="tog(this,'cr')"><h2>🔄 Replace Crew</h2><span class="arr">▼</span></div>
-<div id="cr" class="col-b"><div class="card" style="margin-top:0"><input type="text" id="r-oic" placeholder="Original crew IC"><input type="text" id="r-nn" placeholder="Replacement name"><input type="text" id="r-nic" placeholder="Replacement IC"><input type="text" id="r-nph" placeholder="Replacement phone"><input type="text" id="r-nts" placeholder="T-Shirt size"><input type="text" id="r-ref" placeholder="Referral"><div id="r-msg" class="alert" style="display:none"></div><button class="btn btn-danger" onclick="doReplace()">Confirm Replacement</button></div></div>
-
-<div class="col-h" onclick="tog(this,'ce')"><h2>📄 Export Report</h2><span class="arr">▼</span></div>
-<div id="ce" class="col-b"><div class="card" style="margin-top:0"><p style="font-size:13px;color:#64748b;margin-bottom:12px">Grouped by position, active only.</p><button class="btn btn-primary" onclick="doExport()">📄 Generate</button><div id="exp-msg" style="display:none;margin-top:12px"></div></div></div>
-
-<div class="col-h" onclick="tog(this,'cbl')"><h2>⚫ Blacklist</h2><span class="arr">▼</span></div>
-<div id="cbl" class="col-b"><div class="card" style="margin-top:0">
- <p style="font-size:13px;color:#64748b;margin-bottom:12px">Crew members who will not be rehired for future events.</p>
- <button class="btn btn-outline btn-sm" onclick="loadBlacklist()" style="margin-bottom:12px">🔄 Load Blacklist</button>
- <div id="bl-list"></div>
-</div></div>
-
-<div class="col-h open" onclick="tog(this,'cl')"><h2>📋 Crew List</h2><span class="arr">▼</span></div>
-<div id="cl" class="col-b open"><div class="card" style="margin-top:0">
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;color:#64748b" id="flt-sum"></span><button class="btn btn-outline btn-sm" onclick="loadAdmin()">🔄</button></div>
- <input type="text" id="flt-q" placeholder="Search name / IC / phone..." oninput="fltAdmin()">
- <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-  <select id="flt-st" onchange="fltAdmin()" style="flex:1;margin-bottom:0;min-width:90px"><option value="">All Status</option><option value="pending">⏳ Pending</option><option value="checked_in">✅ In</option><option value="checked_out">🔵 Out</option><option value="absent">❌ Absent</option></select>
-  <select id="flt-pos" onchange="fltAdmin()" style="flex:1;margin-bottom:0;min-width:90px"><option value="">All Positions</option></select>
-  <select id="flt-meal" onchange="fltAdmin()" style="flex:1;margin-bottom:0;min-width:90px"><option value="">All Meals</option></select>
- </div>
- <div id="admin-tbl" style="max-height:60vh;overflow-y:auto"></div>
-</div></div>
-<button class="btn btn-outline" onclick="show('s-role')">← Back</button>
-</div>
-
-<!-- EXPORT -->
-<div id="s-export" class="screen screen-wide">
-<div class="no-print" style="text-align:center;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print / PDF</button><button class="btn btn-outline btn-sm" onclick="show('s-admin')" style="margin-left:8px">← Back</button></div>
-<div id="exp-html" style="background:#fff;color:#000;padding:30px;border-radius:12px"></div>
-</div>
-
-<!-- Hidden for scanFile -->
-<div id="qr-tmp" style="display:none"></div>
-<!-- Popup -->
-<div id="popup" class="popup"></div>
-
-<script>
-const API='https://script.google.com/macros/s/AKfycbxVXyMn-byyUMFy8nTBMGjEUTahSO9jWav9n7mhWAfrKSOYVmX3nyVEW4cfurAAIcxT-Q/exec';
-let E={c:'',n:'',ctoken:'',atoken:''},D=[],Tags={},CO=false,scanner=null,AK='',AI='',AC=[];
-
-// IC & phone normalizer
-function fmtIC(ic){const s=String(ic||'').replace(/[-\s]/g,'');if(s.length===12)return s.substring(0,6)+'-'+s.substring(6,8)+'-'+s.substring(8);return s}
-function fmtPhone(ph){let s=String(ph||'').trim();if(!s||s==='0'||s==='null')return'-';if(s.match(/^[1-9]/)&&s.length>=9&&s.length<=10)s='0'+s;return s}
-// Malaysia time helper (UTC+8)
-function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000).toISOString().replace('T',' ').substring(0,19)}
-function fmtTime(t){if(!t||t==='-')return'-';return t}
-
-// ===== UTILS =====
-function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();if(id==='s-admin')startAdminRefresh();else stopAdminRefresh()}
-function mg(id,m,t){const e=document.getElementById(id);e.style.display='block';e.className='alert alert-'+t;e.textContent=m}
-function hd(id){document.getElementById(id).style.display='none'}
-function el(id){return document.getElementById(id)}
-function sb(s){return s==='checked_in'?'<span class="badge badge-in">✅ In</span>':s==='checked_out'?'<span class="badge badge-out">🔵 Out</span>':s==='absent'?'<span class="badge badge-absent">❌ Absent</span>':'<span class="badge badge-pending">⏳ Pending</span>'}
-function tog(h,id){h.classList.toggle('open');el(id).classList.toggle('open')}
-function popup(msg,color){const p=el('popup');p.textContent=msg;p.style.background=color||'#10b981';p.style.color='#fff';p.style.display='block';setTimeout(()=>p.style.display='none',3000)}
-
-// ===== OFFLINE =====
-function getQ(){try{return JSON.parse(localStorage.getItem('oq_'+E.c)||'[]')}catch(e){return[]}}
-function saveQ(q){localStorage.setItem('oq_'+E.c,JSON.stringify(q));const c=el('sync-card');if(q.length){c.style.display='block';el('sync-n').textContent=q.length}else c.style.display='none'}
-function addQ(action,data){const q=getQ();q.push({action,data});saveQ(q)}
-async function doSync(){const q=getQ();if(!q.length)return;try{await api('batchSync',{operations:q});saveQ([]);popup('✅ Synced '+q.length+' records!');await loadData()}catch(e){popup('❌ Sync failed','#ef4444')}}
-function showQ(){const q=getQ();if(q.length){el('sync-card').style.display='block';el('sync-n').textContent=q.length}}
-window.addEventListener('online',()=>{const q=getQ();if(q.length){popup('🌐 Back online! Syncing...');setTimeout(doSync,1000)}});
-window.addEventListener('offline',()=>popup('📡 Offline','#f59e0b'));
-
-// ===== AUTH =====
-async function doVerify(){const c=el('inp-ec').value.trim().toUpperCase();if(!c)return mg('err-home','Enter event code','error');mg('err-home','Verifying...','info');try{const r=await api('verifyEventCode',{eventCode:c});if(r.success){E.c=r.eventCode;E.n=r.eventName;el('lbl-role').textContent='📅 '+E.n;show('s-role');hd('err-home')}else mg('err-home',r.message,'error')}catch(e){mg('err-home','Connection error','error')}}
-function go(r){const lbl='📅 '+E.n;if(r==='crew'){el('lbl-crew').textContent=lbl;show('s-crew1')}else if(r==='counter'){el('lbl-clogin').textContent=lbl;show('s-clogin')}else{el('lbl-alogin').textContent=lbl;show('s-alogin')}}
-
-// ===== CREW =====
-async function crewLogin(){const ic=el('inp-ic').value.trim();if(!ic)return mg('err-crew','Enter IC','error');mg('err-crew','Looking up...','info');
-const r=await api('getCrewInfo',{eventCode:E.c,ic});if(!r.success)return mg('err-crew',r.message,'error');hd('err-crew');
-const c=el('crew-cards');c.innerHTML='';
-r.assignments.forEach((a,i)=>{
- if(r.assignments.length>1)c.innerHTML+='<div class="divider">── Assignment '+(i+1)+'/'+r.assignments.length+' ──</div>';
- c.innerHTML+='<div class="card"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+a.name+'</span></div><div class="info-row"><span class="info-label">IC</span><span class="info-value" style="color:#64748b">'+a.ic+'</span></div><div class="info-row"><span class="info-label">Section</span><span class="info-value">'+a.section+'</span></div><div class="info-row"><span class="info-label">Level</span><span class="info-value">'+a.level+'</span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+a.position+'</span></span></div><div class="info-row"><span class="info-label">T-Shirt</span><span class="info-value">'+(a.tshirtSize||'-')+'</span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(a.status)+'</span></div>'+(a.status==='checked_in'?'<div class="alert alert-success" style="margin-top:8px">Checked in '+a.cin+' · Tag: '+a.tag+'</div>':'')+'</div><div style="text-align:center;margin-bottom:20px"><p style="font-size:13px;color:#64748b;margin-bottom:10px">Show QR for <b>'+a.position+'</b></p><div class="qr-frame"><div id="qr-'+i+'"></div></div></div>';
- setTimeout(()=>{new QRCode(el('qr-'+i),{text:JSON.stringify({ic:a.ic,eventCode:E.c,section:a.section,level:a.level,position:a.position}),width:200,height:200,colorDark:'#1e293b',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H})},100)});
-show('s-crew2')}
-
-// ===== COUNTER =====
-async function counterLogin(){const pw=el('inp-cpw').value.trim();if(!pw)return mg('err-clogin','Enter password','error');mg('err-clogin','Verifying...','info');
-const r=await api('verifyCounterPassword',{eventCode:E.c,password:pw});if(!r.success)return mg('err-clogin',r.message,'error');
-E.ctoken=r.token;hd('err-clogin');el('lbl-counter').textContent='📅 '+E.n;show('s-counter');await loadData();startCam();showQ()}
-
-async function loadData(){
- try{const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false,token:E.ctoken});if(r.success){D=r.crew;Tags=r.usedTags;CO=r.checkoutEnabled;
-   localStorage.setItem('dc_'+E.c,JSON.stringify({d:D,t:Tags,co:CO}));populateDE()}else if(r.message)mg('scan-msg',r.message,'error')}
- catch(e){const c=localStorage.getItem('dc_'+E.c);if(c){const j=JSON.parse(c);D=j.d;Tags=j.t||{};CO=j.co;populateDE();mg('scan-msg','⚡ Offline mode','warn')}}}
-
-function findIC(ic){const n=String(ic).replace(/[-\s]/g,'');return D.filter(c=>String(c.ic).replace(/[-\s]/g,'')===n)}
-function findKey(k){return D.find(c=>c.key===k)}
-function findTag(t){const u=String(t).trim().toUpperCase();return D.find(c=>String(c.tag).trim().toUpperCase()===u&&c.status!=='absent')}
-
-function cMode(m){el('m-pre').classList.toggle('active',m==='pre');el('m-dur').classList.toggle('active',m==='dur');el('mode-pre').style.display=m==='pre'?'block':'none';el('mode-dur').style.display=m==='dur'?'block':'none';if(m==='pre'&&el('t-scan').classList.contains('active'))startCam();else stopCam()}
-function cTab(t){['scan','ic'].forEach(x=>{el('t-'+x).classList.toggle('active',x===t);el('tab-'+x).style.display=x===t?'block':'none'});el('cinfo').style.display='none';el('multi').style.display='none';if(t==='scan')startCam();else stopCam()}
-function dTab(t){el('dt-find').classList.toggle('active',t==='find');el('dt-tag').classList.toggle('active',t==='tag');el('dtab-find').style.display=t==='find'?'block':'none';el('dtab-tag').style.display=t==='tag'?'block':'none'}
-
-function searchIC(){const ic=el('inp-mic').value.trim();if(!ic)return;el('multi').style.display='none';el('cinfo').style.display='none';const m=findIC(ic);if(!m.length)return mg('scan-msg','IC not found. Look for Admin.','error');if(m.length===1)showCrew(m[0]);else showPick(m)}
-function showPick(list){const l=el('multi-list');l.innerHTML='';list.forEach(a=>{const off=a.status==='checked_out';l.innerHTML+='<div class="pick '+(off?'off':'')+'" data-k="'+a.key+'" onclick="'+(off?'':'pickOne(this)')+'"><div style="display:flex;justify-content:space-between;align-items:center"><div><span class="pos">'+a.position+'</span><div style="font-size:12px;color:#64748b;margin-top:4px">'+a.section+' · '+a.level+'</div></div>'+sb(a.status)+'</div></div>'});el('multi').style.display='block';el('cinfo').style.display='none'}
-function pickOne(e){const c=findKey(e.dataset.k);if(c){el('multi').style.display='none';showCrew(c)}}
-
-function showCrew(c){
- ['inp-tag','inp-cmt','inp-ncmt','inp-mic','inp-dtag'].forEach(id=>{try{el(id).value=''}catch(e){}});hd('ci-result');el('multi').style.display='none';
- el('ci-name').textContent=c.name;el('ci-ic').textContent=c.ic;el('ci-sec').textContent=c.section;el('ci-lvl').textContent=c.level;el('ci-pos').textContent=c.position;el('ci-ts').textContent=c.tshirt||'-';el('ci-meal').textContent=c.meal||'-';
- const ci=el('f-cin'),co=el('f-cout'),cm=el('f-cmt'),st=el('ci-st');
- if(c.status==='pending'){st.innerHTML=sb('pending');ci.style.display='block';co.style.display='none';cm.style.display='none'}
- else if(c.status==='checked_in'){st.innerHTML='<span class="badge badge-in">✅ In '+c.cin+'</span>';ci.style.display='none';co.style.display='block';cm.style.display='block'}
- else if(c.status==='checked_out'){st.innerHTML='<span class="badge badge-out">🔵 Out '+c.cout+'</span>';ci.style.display='none';co.style.display='none';cm.style.display='block'}
- else{st.innerHTML=sb(c.status);ci.style.display='none';co.style.display='none';cm.style.display='block'}
- const ce=el('ci-oldcmt');if(c.cmt){ce.style.display='block';ce.textContent='📝 '+c.cmt}else ce.style.display='none';
- el('cinfo').style.display='block';el('cinfo').dataset.k=c.key;el('cinfo').dataset.ic=c.ic;stopCam()}
-
-function onQR(text){try{const d=JSON.parse(text);if(d.eventCode!==E.c)return mg('scan-msg','Wrong event!','error');const k=String(d.ic).replace(/[-\s]/g,'')+'|'+d.section+'|'+d.level+'|'+d.position;const c=findKey(k);if(c){mg('scan-msg','✅ '+c.name,'success');stopCam();showCrew(c)}else mg('scan-msg','Not found in cache','error')}catch(e){mg('scan-msg','Invalid QR','error')}}
-
-// Check In
-async function doIn(){const tag=el('inp-tag').value.trim(),cmt=el('inp-cmt').value.trim();if(!tag){alert('Enter tag number');return}
- const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,tu=tag.toUpperCase();
- if(Tags[tu]){mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error');return}
- const btn=el('btn-cin');if(btn.disabled)return;btn.disabled=true;const oldTxt=btn.textContent;btn.textContent='Checking in...';
- const data={eventCode:E.c,ic,tag,cmt,key:k,clientTime:myTime(),token:E.ctoken};
- try{const r=await api('checkIn',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
-  if(r.success){el('f-cin').style.display='none';el('inp-tag').value='';el('inp-cmt').value='';const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=r.time}Tags[tu]=c?c.name:''}}
- catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin='(offline)'}Tags[tu]=c?c.name:'';
-  mg('ci-result','⚡ Saved offline','warn');el('f-cin').style.display='none';el('inp-tag').value='';el('inp-cmt').value=''}
-  else mg('ci-result','Server error. Try again.','error')}
- finally{btn.disabled=false;btn.textContent=oldTxt}}
-
-// Check Out
-async function doOut(){const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,data={eventCode:E.c,ic,key:k,clientTime:myTime(),token:E.ctoken};
- const btn=el('btn-cout');if(btn.disabled)return;btn.disabled=true;const oldTxt=btn.textContent;btn.textContent='Checking out...';
- try{const r=await api('checkOut',data);mg('ci-result',r.message+(r.time?' ('+r.time+')':''),r.success?'success':'error');
-  if(r.success){el('f-cout').style.display='none';const c=findKey(k);if(c){c.status='checked_out';c.cout=r.time}}}
- catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(k);if(c){c.status='checked_out';c.cout='(offline)'}
-  mg('ci-result','⚡ Saved offline','warn');el('f-cout').style.display='none'}
-  else mg('ci-result','Server error. Try again.','error')}
- finally{btn.disabled=false;btn.textContent=oldTxt}}
-
-// Comment
-async function doCmt(role){const inp=role==='admin'?'adm-ncmt':'inp-ncmt',res=role==='admin'?'adm-cmsg':'ci-result';
- const comment=el(inp).value.trim();if(!comment){alert('Write comment');return}
- const k=role==='admin'?AK:el('cinfo').dataset.k,ic=role==='admin'?AI:el('cinfo').dataset.ic;
- const tok=role==='admin'?E.atoken:E.ctoken;
- try{const r=await api('addComment',{eventCode:E.c,ic,comment,key:k,token:tok});mg(res,r.message,r.success?'success':'error');if(r.success)el(inp).value=''}
- catch(e){if(!navigator.onLine){addQ('addComment',{eventCode:E.c,ic,comment,key:k,token:tok});mg(res,'⚡ Saved offline','warn');el(inp).value=''}else mg(res,'Server error','error')}}
-
-function counterBack(){
-  // If showing crew info, go back to search
-  if(el('cinfo').style.display!=='none'){nextCrew();return}
-  // If showing multi-pick, go back to search
-  if(el('multi').style.display!=='none'){el('multi').style.display='none';return}
-  // Otherwise go to role selection
-  show('s-role');
+function getRows(sheet){return sheet.getDataRange().getValues().filter((r,i)=>i===0||String(r[0]).trim()!=='')}
+function makeKey(ic,s,l,p){return String(ic).replace(/[-\s]/g,'')+'|'+s+'|'+l+'|'+p}
+function now(){return Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss')}
+function fmtD(v){if(!v)return'';if(v instanceof Date)return Utilities.formatDate(v,TZ,'yyyy-MM-dd HH:mm:ss');return String(v)}
+function getEventRow(ec){
+  const sheet=SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Events');
+  const data=sheet.getDataRange().getValues();
+  const headers=data[0].map(h=>String(h).trim().toLowerCase().replace(/\s+/g,'_'));
+  for(let i=1;i<data.length;i++){
+    if(String(data[i][headers.indexOf('event_code')]||data[i][0]).trim()===String(ec).trim()){
+      const obj={row:data[i],idx:i+1};
+      headers.forEach((h,ci)=>{obj[h]=data[i][ci]});
+      return obj;
+    }
+  }
+  return null;
 }
-function nextCrew(){el('cinfo').style.display='none';el('multi').style.display='none';['inp-tag','inp-cmt','inp-ncmt','inp-mic'].forEach(id=>el(id).value='');mg('scan-msg','📷 Ready — point at next QR code','info');if(el('t-scan').classList.contains('active'))startCam()}
+function clearCache(ec){try{const c=CacheService.getScriptCache();c.remove('ed_'+ec+'_0');c.remove('ed_'+ec+'_1')}catch(e){}}
 
-// During Event
-function populateDE(){const p=[...new Set(D.map(c=>c.position).filter(Boolean))].sort(),s=[...new Set(D.map(c=>c.section).filter(Boolean))].sort(),l=[...new Set(D.map(c=>c.level).filter(Boolean))].sort();
- el('df-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('df-pos').innerHTML+='<option>'+v+'</option>');
- el('df-sec').innerHTML='<option value="">All Sections</option>';s.forEach(v=>el('df-sec').innerHTML+='<option>'+v+'</option>');
- el('df-lvl').innerHTML='<option value="">All Levels</option>';l.forEach(v=>el('df-lvl').innerHTML+='<option>'+v+'</option>')}
-function filterDE(){const p=el('df-pos').value,s=el('df-sec').value,l=el('df-lvl').value;
- const f=D.filter(c=>(!p||c.position===p)&&(!s||c.section===s)&&(!l||c.level===l)&&c.status!=='absent');
- if(!f.length){el('de-list').innerHTML='<div class="loading">No crew</div>';return}
- el('de-list').innerHTML=f.map(c=>{const x=[];if(!p)x.push(c.position);if(!s)x.push(c.section);if(!l)x.push(c.level);
-  return'<div class="crew-item"><span class="n">'+c.name+'</span>'+(x.length?'<span class="m">'+x.join(' · ')+'</span>':'')+'</div>'}).join('')}
-
-// Tag search (During Event) — with checkout
-function tagSearch(){const tag=el('inp-dtag').value.trim();if(!tag)return;const c=findTag(tag);const ct=el('tag-result');ct.style.display='block';
- if(c){ct.innerHTML='<div class="card"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+c.name+'</span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+c.position+'</span></span></div><div class="info-row"><span class="info-label">Section · Level</span><span class="info-value">'+c.section+' · '+c.level+'</span></div><div class="info-row"><span class="info-label">Tag</span><span class="info-value" style="color:#6366f1;font-weight:700">'+c.tag+'</span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(c.status)+'</span></div>'+(c.status==='checked_in'?'<button class="btn btn-yellow" style="margin-top:12px" onclick="tagOut(\''+c.key+'\',\''+c.ic+'\')">🔄 Check Out</button>':'')+'</div>';
- }else ct.innerHTML='<div class="alert alert-error">Tag not found</div>'}
-
-async function tagOut(key,ic){
- const data={eventCode:E.c,ic,key,clientTime:myTime(),token:E.ctoken};
- try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');tagSearch()}else popup(r.message,'#ef4444')}
- catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
-
-// ===== CAMERA (live scanner primary on GitHub Pages) =====
-function startCam(){if(scanner)return;
- try{scanner=new Html5Qrcode("qr-reader");
-  scanner.start({facingMode:"environment"},{fps:15,qrbox:{width:250,height:250},aspectRatio:1.0},
-   text=>{
-    scanner.pause();
-    // Vibrate on scan (mobile)
-    if(navigator.vibrate)navigator.vibrate(200);
-    mg('scan-msg','✅ QR Scanned!','success');
-    onQR(text);
-    // Auto-resume after 2 seconds for continuous scanning
-    setTimeout(()=>{if(scanner)try{scanner.resume()}catch(e){}},2000);
-   },
-   err=>{/* ignore continuous errors */})
-  .then(()=>{mg('scan-msg','📷 Point camera at QR code','success');el('photo-backup').style.display='none'})
-  .catch(e=>{scanner=null;mg('scan-msg','Camera not available','warn');el('photo-backup').style.display='block'})}
- catch(e){mg('scan-msg','Camera error','warn');el('photo-backup').style.display='block'}}
-function stopCam(){if(scanner){try{scanner.stop().catch(()=>{})}catch(e){}scanner=null}}
-
-// Photo backup (for devices where live camera fails)
-function photoScan(inp){if(!inp.files||!inp.files[0])return;mg('scan-msg','📸 Processing...','info');const f=inp.files[0];inp.value='';
- const sc1=new Html5Qrcode("qr-tmp");
- sc1.scanFile(f,false).then(t=>{mg('scan-msg','✅ Decoded!','success');onQR(t)}).catch(()=>{
-  const rd=new FileReader();rd.onerror=()=>mg('scan-msg','Cannot read file','error');
-  rd.onload=function(ev){const img=new Image();
-   img.onerror=()=>mg('scan-msg','Cannot process image','error');
-   img.onload=function(){
-    const cv=document.createElement('canvas');const mx=1024;let w=img.width,h=img.height;
-    if(w>mx){h=Math.round(h*(mx/w));w=mx}if(h>mx){w=Math.round(w*(mx/h));h=mx}
-    cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);
-    cv.toBlob(function(blob){if(!blob){mg('scan-msg','Conversion failed','error');return}
-     const sc2=new Html5Qrcode("qr-tmp");
-     sc2.scanFile(new File([blob],'s.jpg',{type:'image/jpeg'}),false)
-      .then(t=>{mg('scan-msg','✅ Decoded!','success');onQR(t)})
-      .catch(()=>mg('scan-msg','No QR detected. Try closer.','warn'))
-    },'image/jpeg',0.9)};
-   img.src=ev.target.result};rd.readAsDataURL(f)})}
-
-// ===== ADMIN =====
-async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg('err-alogin','Enter password','error');mg('err-alogin','Verifying...','info');const r=await api('verifyAdminPassword',{eventCode:E.c,password:pw});if(r.success){E.atoken=r.token;hd('err-alogin');el('lbl-admin').textContent='📅 '+E.n;show('s-admin');loadAdmin()}else mg('err-alogin',r.message,'error')}
-
-async function loadAdmin(){
- const prevQ=el('flt-q').value,prevSt=el('flt-st').value,prevPos=el('flt-pos').value,prevMeal=el('flt-meal').value;
- el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
- const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true,token:E.atoken});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
- const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length,act=AC.filter(c=>c.status==='checked_in').length;
- el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;el('st-duty').textContent=act;
- el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
- renderPos();
- popAdmFlt();
- el('flt-q').value=prevQ;el('flt-st').value=prevSt;
- if([...el('flt-pos').options].some(o=>o.value===prevPos))el('flt-pos').value=prevPos;
- if([...el('flt-meal').options].some(o=>o.value===prevMeal))el('flt-meal').value=prevMeal;
- fltAdmin()}
-
-let PV='in';
-function posView(v){PV=v;el('pv-in').classList.toggle('active',v==='in');el('pv-out').classList.toggle('active',v==='out');renderPos()}
-function renderPos(){
- const pl=el('pos-list');pl.innerHTML='';const pos={};
- AC.forEach(c=>{const pp=c.position||'?';if(!pos[pp])pos[pp]={t:0,i:0,o:0,p:0,a:0};pos[pp].t++;if(c.status==='checked_in'||c.status==='checked_out')pos[pp].i++;if(c.status==='checked_out')pos[pp].o++;if(c.status==='pending')pos[pp].p++;if(c.status==='absent')pos[pp].a++});
- Object.entries(pos).forEach(([p,d])=>{
-  let num,den,pct,sub,color;
-  if(PV==='in'){num=d.i;den=d.t;pct=den>0?Math.round(num/den*100):0;sub=num+'/'+den+' arrived · '+d.p+' pending'+(d.a?' · '+d.a+' absent':'');color='#6366f1'}
-  else{num=d.o;den=d.i;pct=den>0?Math.round(num/den*100):0;const remain=d.i-d.o;sub=num+'/'+den+' checked out'+(remain?' · '+remain+' still onsite':' · all clear')+(d.p?' · '+d.p+' not arrived':'');color='#2563eb'}
-  pl.innerHTML+='<div class="section-row"><div style="flex:1"><div style="font-weight:600">'+p+'</div><div style="font-size:12px;color:#64748b">'+sub+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+color+'"></div></div></div><div style="font-size:18px;font-weight:700;color:'+color+';margin-left:12px">'+pct+'%</div></div>'})}
-
-let adminRefreshTimer=null;
-function startAdminRefresh(){stopAdminRefresh();adminRefreshTimer=setInterval(()=>{if(!document.hidden)loadAdmin()},30000)}
-function stopAdminRefresh(){if(adminRefreshTimer){clearInterval(adminRefreshTimer);adminRefreshTimer=null}}
-
-async function toggleCO(){const r=await api('toggleCheckout',{eventCode:E.c,token:E.atoken});if(r.success){CO=r.enabled;el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off'}}
-
-async function adminTagSearch(){const tag=el('inp-atag').value.trim();if(!tag)return;
- try{const r=await api('getCrewByTag',{eventCode:E.c,tag,token:E.atoken});const c=el('atag-r');c.style.display='block';
-  if(r.success){AK=r.key;AI=r.ic;c.innerHTML='<div style="margin-top:12px"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+r.name+'</span></div><div class="info-row"><span class="info-label">IC</span><span class="info-value">'+r.ic+'</span></div><div class="info-row"><span class="info-label">Phone</span><span class="info-value"><a href="tel:'+r.phone+'" style="color:#6366f1">📞 '+(r.phone||'-')+'</a></span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+r.position+'</span></span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(r.status)+'</span></div>'+(r.cmt?'<div class="comment-box" style="margin-top:8px">📝 '+r.cmt+'</div>':'')+'<textarea id="adm-ncmt" placeholder="Comment..." style="margin-top:8px"></textarea><button class="btn btn-primary" onclick="doCmt(\'admin\')" style="margin-top:4px">💾 Save</button><div id="adm-cmsg" class="alert" style="display:none;margin-top:8px"></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0"><input type="text" id="bl-reason" placeholder="Blacklist reason..."><button class="btn btn-danger btn-sm" onclick="doBlacklist()" style="margin-top:4px">⚫ Add to Blacklist</button><div id="bl-msg" class="alert" style="display:none;margin-top:8px"></div></div></div>'}
-  else c.innerHTML='<div class="alert alert-error" style="margin-top:8px">'+r.message+'</div>'}catch(e){}}
-
-async function doReplace(){const o=el('r-oic').value.trim(),n=el('r-nn').value.trim(),ni=el('r-nic').value.trim(),np=el('r-nph').value.trim(),nt=el('r-nts').value.trim(),rf=el('r-ref').value.trim();
- if(!o||!n||!ni||!rf)return mg('r-msg','Fill Original IC, Name, IC & Referral','error');mg('r-msg','Processing...','info');
- const r=await api('replaceCrew',{eventCode:E.c,originalIC:o,replacementName:n,replacementIC:ni,replacementPhone:np,replacementTshirt:nt,referral:rf,token:E.atoken});mg('r-msg',r.message,r.success?'success':'error');if(r.success){['r-oic','r-nn','r-nic','r-nph','r-nts','r-ref'].forEach(id=>el(id).value='');loadAdmin()}}
-
-async function doExport(){mg('exp-msg','Generating...','info');const r=await api('getExportData',{eventCode:E.c,token:E.atoken});if(!r.success)return mg('exp-msg',r.message,'error');hd('exp-msg');
- const g={};r.crewList.forEach(c=>{if(!g[c.position])g[c.position]=[];g[c.position].push(c)});
- let h='<div style="text-align:center;margin-bottom:24px;font-family:Arial"><h1 style="font-size:20px;margin:0">'+r.eventName+'</h1><p style="color:#666;font-size:13px;margin-top:4px">Attendance Report'+(r.eventDate?' · '+new Date(r.eventDate).toLocaleDateString():'')+'</p></div>';
- Object.entries(g).forEach(([p,crew])=>{h+='<h2 style="font-size:15px;margin:20px 0 8px;padding:8px 14px;background:#f5f3ff;color:#6366f1;border-radius:8px;border-left:4px solid #6366f1;font-family:Arial">'+p+' ('+crew.length+')</h2><table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial"><tr style="background:#f8fafc"><th style="border:1px solid #e2e8f0;padding:8px;text-align:center;width:40px">No</th><th style="border:1px solid #e2e8f0;padding:8px">Name</th><th style="border:1px solid #e2e8f0;padding:8px">IC</th><th style="border:1px solid #e2e8f0;padding:8px">Check In</th><th style="border:1px solid #e2e8f0;padding:8px">Check Out</th></tr>';crew.forEach((c,i)=>{h+='<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:center">'+(i+1)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.name+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.ic+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cin)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cout)+'</td></tr>'});h+='</table>'});
- h+='<div style="margin-top:30px;font-size:11px;color:#94a3b8;text-align:center;font-family:Arial">Generated '+new Date().toLocaleString()+'</div>';
- el('exp-html').innerHTML=h;show('s-export')}
-
-function renderAdm(list){const c=el('admin-tbl');el('flt-sum').textContent='Showing '+list.length;if(!list.length){c.innerHTML='<div class="loading">No crew</div>';return}
- let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Sec</th><th>Lvl</th><th>Position</th><th>Meal</th><th>Tag</th><th>Status</th></tr>';
- list.forEach(r=>{const pf=fmtPhone(r.phone);const ph=pf!=='-'?'<a href="tel:'+pf+'" style="color:#6366f1;text-decoration:none">📞'+pf+'</a>':'-';h+='<tr'+(r.blacklisted?' style="background:#fef2f2"':'')+'><td style="font-weight:600">'+(r.blacklisted?'⚫ ':'')+r.name+'</td><td style="font-size:11px;color:#64748b">'+fmtIC(r.ic)+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
- h+='</table></div>';c.innerHTML=h}
-function fltAdmin(){const q=el('flt-q').value.toLowerCase().trim(),st=el('flt-st').value,pos=el('flt-pos').value,meal=el('flt-meal').value;
- renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))||fmtPhone(c.phone).includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)}))}
-function popAdmFlt(){const p=[...new Set(AC.map(c=>c.position).filter(Boolean))].sort(),m=[...new Set(AC.map(c=>c.meal).filter(Boolean))].sort();
- el('flt-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('flt-pos').innerHTML+='<option>'+v+'</option>');
- el('flt-meal').innerHTML='<option value="">All Meals</option>';m.forEach(v=>el('flt-meal').innerHTML+='<option>'+v+'</option>')}
-
-// ===== BLACKLIST =====
-async function doBlacklist(){
-  const reason=el('bl-reason').value.trim();if(!reason){alert('Please enter a reason');return}
-  if(!confirm('Blacklist this crew? This cannot be undone easily.'))return;
-  // Find crew details from AC or tag search result
-  const crew=AC.find(cr=>cr.key===AK)||{};
-  try{const r=await api('blacklistCrew',{eventCode:E.c,ic:AI,name:crew.name||'',phone:crew.phone||'',reason,token:E.atoken});
-    mg('bl-msg',r.message,r.success?'success':'error');if(r.success){el('bl-reason').value='';loadAdmin()}}
-  catch(e){mg('bl-msg','Error: '+e.message,'error')}
+// ===== SESSION TOKENS (server-side auth enforcement, no expiry — safe for full-day events) =====
+function makeToken(eventCode,role){const token=Utilities.getUuid();PropertiesService.getScriptProperties().setProperty('tok_'+token,JSON.stringify({eventCode:String(eventCode).trim(),role}));return token}
+function checkAuth(d,minRole){
+  if(!d||!d.token)return false;
+  const raw=PropertiesService.getScriptProperties().getProperty('tok_'+d.token);if(!raw)return false;
+  try{const obj=JSON.parse(raw);
+    if(obj.eventCode!==String(d.eventCode).trim())return false;
+    if(minRole==='admin')return obj.role==='admin';
+    return obj.role==='counter'||obj.role==='admin'}
+  catch(e){return false}
 }
 
-async function loadBlacklist(){
-  el('bl-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  try{const r=await api('getBlacklist',{eventCode:E.c,token:E.atoken});
-    if(!r.success||!r.list.length){el('bl-list').innerHTML='<div class="loading">No blacklisted crew</div>';return}
-    let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Reason</th><th>Date</th><th>Event</th></tr>';
-    r.list.forEach(b=>{h+='<tr><td style="font-weight:600">'+b.name+'</td><td style="font-size:11px">'+fmtIC(b.ic)+'</td><td>'+fmtPhone(b.phone)+'</td><td style="font-size:12px;color:#dc2626">'+b.reason+'</td><td style="font-size:11px">'+b.date+'</td><td style="font-size:11px">'+b.event+'</td></tr>'});
-    h+='</table></div>';el('bl-list').innerHTML=h}
-  catch(e){el('bl-list').innerHTML='<div class="loading">Error loading</div>'}
+function doGet(e){if(e&&e.parameter&&e.parameter.action)return handleAction(e.parameter);return HtmlService.createHtmlOutputFromFile('Index').setTitle('Crew Check-In').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)}
+function handleAction(params){try{const a=params.action;const d=params.data?JSON.parse(decodeURIComponent(params.data)):{};
+const fns={verifyEventCode,verifyCounterPassword,verifyAdminPassword,getCrewInfo,getCrewByIC,getCrewByTag,blacklistCrew,getBlacklist,getFullEventData,checkIn,checkOut,addComment,replaceCrew,getDashboard,toggleCheckout,getExportData,batchSync};
+const fn=fns[a];return ContentService.createTextOutput(JSON.stringify(fn?fn(d):{success:false,message:'Unknown'})).setMimeType(ContentService.MimeType.JSON)}
+catch(err){return ContentService.createTextOutput(JSON.stringify({success:false,message:err.toString()})).setMimeType(ContentService.MimeType.JSON)}}
+
+// AUTH
+function verifyEventCode(d){const e=getEventRow(d.eventCode);if(e&&String(e.status||e.row[5]).trim()==='active')return{success:true,eventName:e.event_name||e.row[1],eventDate:fmtD(e.date||e.row[2]),eventCode:String(e.event_code||e.row[0]).trim()};return{success:false,message:'Invalid event code'}}
+function verifyCounterPassword(d){const e=getEventRow(d.eventCode);if(e&&String(e.counter_password||e.row[3]).trim()===d.password){const ec=String(e.event_code||e.row[0]).trim();return{success:true,eventName:e.event_name||e.row[1],eventCode:ec,token:makeToken(ec,'counter')}}return{success:false,message:'Invalid counter password'}}
+function verifyAdminPassword(d){const e=getEventRow(d.eventCode);if(e&&String(e.admin_password||e.row[4]).trim()===d.password){const ec=String(e.event_code||e.row[0]).trim();return{success:true,eventName:e.event_name||e.row[1],eventCode:ec,token:makeToken(ec,'admin')}}return{success:false,message:'Invalid admin password'}}
+function toggleCheckout(d){
+  if(!checkAuth(d,'admin'))return{success:false,message:'Session expired. Please login again.'};
+  const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet=ss.getSheetByName('Events');
+  const data=sheet.getDataRange().getValues();
+  // Find column by header
+  const headers=data[0].map(h=>String(h).trim().toLowerCase());
+  const ecCol=headers.indexOf('event_code');
+  const coCol=headers.indexOf('checkout_enabled');
+  if(ecCol===-1||coCol===-1)return{success:false,message:'Missing columns: event_code or checkout_enabled in Events sheet'};
+  // Find event row
+  const ec=String(d.eventCode).trim();
+  let rowIdx=-1;
+  for(let i=1;i<data.length;i++){if(String(data[i][ecCol]).trim()===ec){rowIdx=i;break}}
+  if(rowIdx===-1)return{success:false,message:'Event code "'+ec+'" not found in Events sheet'};
+  // Toggle
+  const cur=String(data[rowIdx][coCol]).trim().toLowerCase()==='yes';
+  const newVal=cur?'no':'yes';
+  sheet.getRange(rowIdx+1,coCol+1).setValue(newVal);
+  SpreadsheetApp.flush();
+  clearCache(ec);
+  return{success:true,enabled:!cur};
 }
 
-// ===== 4. Show blacklist warning in crew table =====
-document.addEventListener('keydown',e=>{if(e.key==='Enter'){const s=document.querySelector('.screen.active').id;if(s==='s-home')doVerify();else if(s==='s-crew1')crewLogin();else if(s==='s-clogin')counterLogin();else if(s==='s-alogin')adminLogin()}});
-</script>
-</body>
-</html>
+// ATT MAP — all dates formatted to MYT
+function buildAttMap(ss,ec){const rows=getRows(ss.getSheetByName('Attendance'));const m={};
+rows.slice(1).forEach(r=>{if(String(r[R.EVT]).trim()===ec){m[makeKey(r[R.IC],r[R.SEC],r[R.LVL],r[R.POS])]={status:r[R.STATUS]||'pending',tag:r[R.TAG]||'',cin:fmtD(r[R.CIN]),cout:fmtD(r[R.COUT]),cmt:r[R.CMT]||''}}});return m}
+
+// FULL EVENT DATA
+function getFullEventData(d){
+if(!checkAuth(d,d.isAdmin?'admin':'counter'))return{success:false,message:'Session expired. Please login again.'};
+const ck='ed_'+d.eventCode+'_'+(d.isAdmin?'1':'0');const cache=CacheService.getScriptCache();
+try{const c=cache.get(ck);if(c)return JSON.parse(c)}catch(e){}
+const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const cr=getRows(ss.getSheetByName('Crew_List'));const am=buildAttMap(ss,d.eventCode);const e=getEventRow(d.eventCode);
+const crew=cr.slice(1).filter(r=>String(r[0]).trim()===d.eventCode).map(r=>{const k=makeKey(r[2],r[4],r[5],r[6]);const a=am[k]||{};
+return{name:r[1],ic:String(r[2]),phone:d.isAdmin?r[3]:'',section:r[4],level:r[5],position:r[6],tshirt:r[7],meal:r[8]||'',key:k,status:a.status||'pending',tag:a.tag||'',cin:a.cin||'',cout:a.cout||'',cmt:a.cmt||''}});
+const co=e?String(e.checkout_enabled||e.row[6]||'').trim().toLowerCase()==='yes':false;
+const tags={};const attRows=getRows(ss.getSheetByName('Attendance'));attRows.slice(1).forEach(r=>{if(String(r[R.EVT]).trim()===d.eventCode&&r[R.TAG]&&r[R.STATUS]!=='absent')tags[String(r[R.TAG]).trim().toUpperCase()]=r[R.NAME]});
+// Flag blacklisted crew
+const blSheet=ss.getSheetByName('Blacklist');const blSet=new Set();
+if(blSheet){blSheet.getDataRange().getValues().slice(1).forEach(r=>{if(String(r[0]).trim())blSet.add(String(r[0]).replace(/[-\s]/g,''))})}
+crew.forEach(cr=>{cr.blacklisted=blSet.has(String(cr.ic).replace(/[-\s]/g,''))});
+const result={success:true,crew,checkoutEnabled:co,usedTags:tags,eventName:e?(e.event_name||e.row[1]):''};
+
+try{cache.put(ck,JSON.stringify(result),30)}catch(e){}return result}
+
+// CREW LOOKUP
+function getCrewInfo(d){const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const rows=getRows(ss.getSheetByName('Crew_List'));const am=buildAttMap(ss,d.eventCode);const ic=String(d.ic).replace(/[-\s]/g,'');const out=[];
+for(let i=1;i<rows.length;i++){if(String(rows[i][0]).trim()===d.eventCode&&String(rows[i][2]).replace(/[-\s]/g,'')===ic){const k=makeKey(rows[i][2],rows[i][4],rows[i][5],rows[i][6]);const a=am[k]||{};
+out.push({name:rows[i][1],ic:rows[i][2],section:rows[i][4],level:rows[i][5],position:rows[i][6],tshirtSize:rows[i][7],meal:rows[i][8]||'',key:k,status:a.status||'pending',tag:a.tag||'',cin:a.cin||''})}}
+if(!out.length)return{success:false,message:'IC not found. Please look for Admin.'};return{success:true,assignments:out}}
+
+function getCrewByIC(d){const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const cr=getRows(ss.getSheetByName('Crew_List'));const att=getRows(ss.getSheetByName('Attendance'));const ic=String(d.ic).replace(/[-\s]/g,'');const tk=d.assignmentKey||null;
+for(let i=1;i<cr.length;i++){const ri=String(cr[i][2]).replace(/[-\s]/g,'');if(String(cr[i][0]).trim()!==d.eventCode||ri!==ic)continue;
+const k=makeKey(cr[i][2],cr[i][4],cr[i][5],cr[i][6]);if(tk&&k!==tk)continue;
+let tag='',cin='',cout='',cmt='',st='pending';
+for(let j=1;j<att.length;j++){if(String(att[j][R.EVT]).trim()===d.eventCode&&makeKey(att[j][R.IC],att[j][R.SEC],att[j][R.LVL],att[j][R.POS])===k){
+tag=att[j][R.TAG]||'';cin=fmtD(att[j][R.CIN]);cout=fmtD(att[j][R.COUT]);cmt=att[j][R.CMT]||'';st=att[j][R.STATUS]||'pending';break}}
+return{success:true,name:cr[i][1],ic:cr[i][2],phone:cr[i][3],section:cr[i][4],level:cr[i][5],position:cr[i][6],tshirtSize:cr[i][7],meal:cr[i][8]||'',key:k,tag,cin,cout,cmt,status:st}}
+return{success:false,message:'IC not found. Please look for Admin.'}}
+
+function getCrewByTag(d){if(!checkAuth(d,'admin'))return{success:false,message:'Session expired. Please login again.'};const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const att=getRows(ss.getSheetByName('Attendance'));const tg=String(d.tag).trim().toUpperCase();
+for(let j=1;j<att.length;j++){if(String(att[j][R.EVT]).trim()===d.eventCode&&String(att[j][R.TAG]).trim().toUpperCase()===tg){
+const cr=getRows(ss.getSheetByName('Crew_List'));let ph='',ml='';const ic=String(att[j][R.IC]).replace(/[-\s]/g,'');
+for(let i=1;i<cr.length;i++){if(String(cr[i][0]).trim()===d.eventCode&&String(cr[i][2]).replace(/[-\s]/g,'')===ic){ph=cr[i][3]||'';ml=cr[i][8]||'';break}}
+const k=makeKey(att[j][R.IC],att[j][R.SEC],att[j][R.LVL],att[j][R.POS]);
+return{success:true,name:att[j][R.NAME],ic:att[j][R.IC],phone:ph,section:att[j][R.SEC],level:att[j][R.LVL],position:att[j][R.POS],tag:att[j][R.TAG],cin:fmtD(att[j][R.CIN]),cout:fmtD(att[j][R.COUT]),cmt:att[j][R.CMT],status:att[j][R.STATUS],key:k,meal:ml}}}
+return{success:false,message:'Tag not found.'}}
+
+// CHECK IN — accepts optional timestamp for offline sync
+function checkIn(d){
+  if(!checkAuth(d,'counter'))return{success:false,message:'Session expired. Please login again.'};
+  const lock=LockService.getScriptLock();
+  try{lock.waitLock(10000)}catch(e){return{success:false,message:'System busy, please try again.'}}
+  try{
+    const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const sh=ss.getSheetByName('Attendance');const rows=getRows(sh);
+    const t=d.clientTime||d.time||now();
+    const tagUp=String(d.tag).trim().toUpperCase();
+    for(let j=1;j<rows.length;j++){if(String(rows[j][R.EVT]).trim()===d.eventCode&&String(rows[j][R.TAG]).trim().toUpperCase()===tagUp&&rows[j][R.STATUS]!=='absent')return{success:false,message:'Tag "'+d.tag+'" already used by '+rows[j][R.NAME]+'!'}}
+    for(let j=1;j<rows.length;j++){if(String(rows[j][R.EVT]).trim()===d.eventCode&&makeKey(rows[j][R.IC],rows[j][R.SEC],rows[j][R.LVL],rows[j][R.POS])===d.key){
+    if(rows[j][R.STATUS]==='checked_in'||rows[j][R.STATUS]==='checked_out')return{success:false,message:'Already checked in!'};
+    const rn=j+1;sh.getRange(rn,W.TAG).setValue(d.tag);sh.getRange(rn,W.CIN).setValue(t);sh.getRange(rn,W.CMT).setValue(d.cmt||'');sh.getRange(rn,W.STATUS).setValue('checked_in');clearCache(d.eventCode);
+    return{success:true,message:'Check in successful!',time:t}}}
+    const cr=getRows(ss.getSheetByName('Crew_List'));let cn='',cs='',cl='',cp='';
+    for(let i=1;i<cr.length;i++){const k=makeKey(cr[i][2],cr[i][4],cr[i][5],cr[i][6]);if(String(cr[i][0]).trim()===d.eventCode&&k===d.key){cn=cr[i][1];cs=cr[i][4];cl=cr[i][5];cp=cr[i][6];break}}
+    sh.appendRow([t,d.eventCode,d.ic,cn,cs,cl,cp,d.tag,t,'',d.cmt||'','checked_in','','']);clearCache(d.eventCode);
+    return{success:true,message:'Check in successful!',time:t}
+  }finally{lock.releaseLock()}
+}
+
+// CHECK OUT — accepts optional timestamp
+function checkOut(d){
+  if(!checkAuth(d,'counter'))return{success:false,message:'Session expired. Please login again.'};
+  const lock=LockService.getScriptLock();
+  try{lock.waitLock(10000)}catch(e){return{success:false,message:'System busy, please try again.'}}
+  try{
+    const e=getEventRow(d.eventCode);if(!e||String(e.checkout_enabled||e.row[6]||'').trim().toLowerCase()!=='yes')return{success:false,message:'Checkout not enabled. Ask Admin.'};
+    const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const sh=ss.getSheetByName('Attendance');const rows=getRows(sh);
+    const t=d.clientTime||d.time||now();
+    for(let j=1;j<rows.length;j++){if(String(rows[j][R.EVT]).trim()===d.eventCode&&makeKey(rows[j][R.IC],rows[j][R.SEC],rows[j][R.LVL],rows[j][R.POS])===d.key){
+    if(rows[j][R.STATUS]==='checked_out')return{success:false,message:'Already checked out!'};
+    if(rows[j][R.STATUS]!=='checked_in')return{success:false,message:'Not checked in yet!'};
+    sh.getRange(j+1,W.COUT).setValue(t);sh.getRange(j+1,W.STATUS).setValue('checked_out');clearCache(d.eventCode);
+    return{success:true,message:'Check out successful!',time:t}}}
+    return{success:false,message:'No record found.'}
+  }finally{lock.releaseLock()}
+}
+
+function addComment(d){if(!checkAuth(d,'counter'))return{success:false,message:'Session expired. Please login again.'};const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const sh=ss.getSheetByName('Attendance');const rows=getRows(sh);
+for(let j=1;j<rows.length;j++){if(String(rows[j][R.EVT]).trim()===d.eventCode&&makeKey(rows[j][R.IC],rows[j][R.SEC],rows[j][R.LVL],rows[j][R.POS])===d.key){
+const ex=rows[j][R.CMT]?String(rows[j][R.CMT]):'';const t=Utilities.formatDate(new Date(),TZ,'HH:mm');
+const nc=ex?ex+' | ['+t+'] '+d.comment:'['+t+'] '+d.comment;sh.getRange(j+1,W.CMT).setValue(nc);return{success:true,message:'Comment saved!'}}}
+return{success:false,message:'No record.'}}
+
+function batchSync(d){const results=[];(d.operations||[]).forEach(op=>{try{
+if(op.action==='checkIn')results.push(checkIn(op.data));
+else if(op.action==='checkOut')results.push(checkOut(op.data));
+else if(op.action==='addComment')results.push(addComment(op.data));
+else results.push({success:false,message:'Unknown'})}catch(e){results.push({success:false,message:e.toString()})}});
+return{success:true,results}}
+
+// REPLACEMENT
+function replaceCrew(d){if(!checkAuth(d,'admin'))return{success:false,message:'Session expired. Please login again.'};const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const csh=ss.getSheetByName('Crew_List');const cr=getRows(csh);
+const ash=ss.getSheetByName('Attendance');const att=getRows(ash);const t=now();const oic=String(d.originalIC).replace(/[-\s]/g,'');
+let oN='',oS='',oL='',oP='',found=false;
+for(let i=1;i<cr.length;i++){if(String(cr[i][0]).trim()===d.eventCode&&String(cr[i][2]).replace(/[-\s]/g,'')===oic){oN=cr[i][1];oS=cr[i][4];oL=cr[i][5];oP=cr[i][6];found=true;break}}
+if(!found)return{success:false,message:'Original crew IC not found.'};
+const oKey=makeKey(d.originalIC,oS,oL,oP);const repBy=d.replacementName+' (IC:'+d.replacementIC+')';const refInfo='Referral: '+d.referral;
+let hasAtt=false;for(let j=1;j<att.length;j++){if(String(att[j][R.EVT]).trim()===d.eventCode&&makeKey(att[j][R.IC],att[j][R.SEC],att[j][R.LVL],att[j][R.POS])===oKey){
+hasAtt=true;ash.getRange(j+1,W.STATUS).setValue('absent');ash.getRange(j+1,W.REPBY).setValue(repBy);ash.getRange(j+1,W.REF).setValue(refInfo);break}}
+if(!hasAtt)ash.appendRow([t,d.eventCode,d.originalIC,oN,oS,oL,oP,'','','','','absent',repBy,refInfo]);
+const rKey=makeKey(d.replacementIC,oS,oL,oP);let exists=false;
+for(let i=1;i<cr.length;i++){if(String(cr[i][0]).trim()===d.eventCode&&makeKey(cr[i][2],cr[i][4],cr[i][5],cr[i][6])===rKey){exists=true;break}}
+if(!exists)csh.appendRow([d.eventCode,d.replacementName,d.replacementIC,d.replacementPhone||'',oS,oL,oP,d.replacementTshirt||'','']);
+clearCache(d.eventCode);return{success:true,message:'Done! '+oN+' → '+d.replacementName}}
+
+// DASHBOARD
+function getDashboard(d){return getFullEventData(d)}
+
+// EXPORT — formatted times
+function getExportData(d){if(!checkAuth(d,'admin'))return{success:false,message:'Session expired. Please login again.'};const ss=SpreadsheetApp.openById(SPREADSHEET_ID);const cr=getRows(ss.getSheetByName('Crew_List'));
+const attRows=getRows(ss.getSheetByName('Attendance'));const am={};
+attRows.slice(1).forEach(r=>{if(String(r[R.EVT]).trim()===d.eventCode){am[makeKey(r[R.IC],r[R.SEC],r[R.LVL],r[R.POS])]={status:r[R.STATUS]||'pending',cin:fmtD(r[R.CIN]),cout:fmtD(r[R.COUT])}}});
+const out=[];cr.slice(1).filter(r=>String(r[0]).trim()===d.eventCode).forEach(r=>{const k=makeKey(r[2],r[4],r[5],r[6]);const a=am[k]||{};if((a.status||'pending')==='absent')return;
+out.push({name:r[1],ic:r[2],position:r[6],cin:a.cin||'-',cout:a.cout||'-'})});
+out.sort((a,b)=>a.position.localeCompare(b.position)||a.name.localeCompare(b.name));
+const e=getEventRow(d.eventCode);return{success:true,eventName:e?(e.event_name||e.row[1]):d.eventCode,eventDate:e?fmtD(e.date||e.row[2]):'',crewList:out}}
+
+// ====== BLACKLIST ======
+function blacklistCrew(d){
+  if(!checkAuth(d,'admin'))return{success:false,message:'Session expired. Please login again.'};
+  const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
+  // Create Blacklist sheet if not exists
+  let blSheet=ss.getSheetByName('Blacklist');
+  if(!blSheet){blSheet=ss.insertSheet('Blacklist');blSheet.appendRow(['ic','name','phone','reason','date_added','from_event'])}
+  const ic=String(d.ic).replace(/[-\s]/g,'');
+  // Check if already blacklisted
+  const rows=blSheet.getDataRange().getValues();
+  for(let i=1;i<rows.length;i++){if(String(rows[i][0]).replace(/[-\s]/g,'')===ic)return{success:false,message:'This crew is already blacklisted.'}}
+  const t=Utilities.formatDate(new Date(),'Asia/Kuala_Lumpur','yyyy-MM-dd HH:mm:ss');
+  blSheet.appendRow([d.ic,d.name,d.phone||'',d.reason,t,d.eventCode]);
+  return{success:true,message:'⚫ '+d.name+' has been blacklisted.'};
+}
+
+function getBlacklist(d){
+  if(!checkAuth(d,'admin'))return{success:false,message:'Session expired. Please login again.'};
+  const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
+  const blSheet=ss.getSheetByName('Blacklist');
+  if(!blSheet)return{success:true,list:[]};
+  const rows=blSheet.getDataRange().getValues();
+  const list=rows.slice(1).filter(r=>String(r[0]).trim()!=='').map(r=>({ic:r[0],name:r[1],phone:r[2],reason:r[3],date:r[4],event:r[5]}));
+  return{success:true,list};
+}
+

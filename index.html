@@ -72,6 +72,12 @@ html,body{overscroll-behavior-y:contain}
 .tag-prefix{background:#f1f5f9;padding:0 14px;font-weight:700;color:#475569;display:flex;align-items:center;white-space:nowrap;font-size:15px}
 .tag-input-group input{border:none!important;border-radius:0!important;margin-bottom:0!important;flex:1}
 .ci-details{background:#fff;border-radius:12px;padding:2px 14px;margin-bottom:12px}
+.stat-refresh{cursor:pointer;background:#f8fafc;user-select:none}
+.stat-refresh .stat-num{font-size:20px}
+.stat-refresh:active{background:#f1f5f9}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{display:inline-block;animation:spin .7s linear infinite}
+.stats-grid.loading .stat-num:not(#refresh-icon-top){opacity:.35}
 </style>
 </head>
 
@@ -186,8 +192,7 @@ html,body{overscroll-behavior-y:contain}
 <!-- ADMIN DASHBOARD -->
 <div id="s-admin" class="screen screen-wide">
 <div class="logo"><h1>⚙️ Admin Dashboard</h1></div><div id="lbl-admin" class="evn"></div>
-<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline btn-sm" onclick="loadAdmin()">🔄 Refresh</button></div>
-<div class="stats-grid">
+<div class="stats-grid" id="stats-grid">
  <div class="stat-card stat-total"><div class="stat-num" id="st-t">-</div><div class="stat-label">Total</div></div>
  <div class="stat-card stat-in"><div class="stat-num" id="st-i">-</div><div class="stat-label">In</div></div>
  <div class="stat-card stat-pending"><div class="stat-num" id="st-p">-</div><div class="stat-label">Pending</div></div>
@@ -195,6 +200,7 @@ html,body{overscroll-behavior-y:contain}
  <div class="stat-card stat-absent"><div class="stat-num" id="st-a">-</div><div class="stat-label">Absent</div></div>
  <div class="stat-card" style="background:#f0fdf4"><div class="stat-num" style="color:#059669" id="st-act">-</div><div class="stat-label">Active Crew</div></div>
  <div class="stat-card" style="background:#eff6ff"><div class="stat-num" style="color:#2563eb" id="st-duty">-</div><div class="stat-label">On Duty</div></div>
+ <div class="stat-card stat-refresh" id="btn-refresh-top" onclick="loadAdmin()"><div class="stat-num" id="refresh-icon-top">🔄</div><div class="stat-label">Refresh</div></div>
 </div>
 <div class="card"><div class="toggle-wrap"><div id="co-tog" class="toggle" onclick="toggleCO()"></div><div><div style="font-weight:600">Checkout Mode</div><div style="font-size:13px;color:#64748b" id="co-lbl">Off</div></div></div></div>
 
@@ -219,7 +225,7 @@ html,body{overscroll-behavior-y:contain}
 
 <div class="col-h open" onclick="tog(this,'cl')"><h2>📋 Crew List</h2><span class="arr">▼</span></div>
 <div id="cl" class="col-b open"><div class="card" style="margin-top:0">
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;color:#64748b" id="flt-sum"></span><button class="btn btn-outline btn-sm" onclick="loadAdmin()">🔄</button></div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;color:#64748b" id="flt-sum"></span><button class="btn btn-outline btn-sm" id="btn-refresh-bottom" onclick="loadAdmin()">🔄</button></div>
  <input type="text" id="flt-q" placeholder="Search name / IC / phone..." oninput="fltAdmin()">
  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
   <select id="flt-st" onchange="fltAdmin()" style="flex:1;margin-bottom:0;min-width:90px"><option value="">All Status</option><option value="pending">⏳ Pending</option><option value="checked_in">✅ In</option><option value="checked_out">🔵 Out</option><option value="absent">❌ Absent</option></select>
@@ -438,18 +444,24 @@ function photoScan(inp){if(!inp.files||!inp.files[0])return;mg('scan-msg','📸 
 async function adminLogin(){const pw=el('inp-apw').value.trim();if(!pw)return mg('err-alogin','Enter password','error');mg('err-alogin','Verifying...','info');const r=await api('verifyAdminPassword',{eventCode:E.c,password:pw});if(r.success){E.atoken=r.token;saveSession();hd('err-alogin');el('lbl-admin').textContent='📅 '+E.n;show('s-admin');loadAdmin()}else mg('err-alogin',r.message,'error')}
 
 async function loadAdmin(){
- const prevQ=el('flt-q').value,prevSt=el('flt-st').value,prevPos=el('flt-pos').value,prevMeal=el('flt-meal').value;
- el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
- const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true,token:E.atoken});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
- const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length,act=AC.filter(c=>c.status==='checked_in').length;
- el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;el('st-duty').textContent=act;
- el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
- renderPos();
- popAdmFlt();
- el('flt-q').value=prevQ;el('flt-st').value=prevSt;
- if([...el('flt-pos').options].some(o=>o.value===prevPos))el('flt-pos').value=prevPos;
- if([...el('flt-meal').options].some(o=>o.value===prevMeal))el('flt-meal').value=prevMeal;
- fltAdmin()}
+ const grid=el('stats-grid'),icon=el('refresh-icon-top'),btnT=el('btn-refresh-top'),btnB=el('btn-refresh-bottom');
+ grid.classList.add('loading');icon.classList.add('spinning');btnT.style.pointerEvents='none';btnB.disabled=true;
+ try{
+  const prevQ=el('flt-q').value,prevSt=el('flt-st').value,prevPos=el('flt-pos').value,prevMeal=el('flt-meal').value;
+  el('admin-tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Loading...</div>';
+  const r=await api('getFullEventData',{eventCode:E.c,isAdmin:true,token:E.atoken});if(!r.success)return;AC=r.crew;CO=r.checkoutEnabled;
+  const t=AC.length,i=AC.filter(c=>c.status==='checked_in'||c.status==='checked_out').length,o=AC.filter(c=>c.status==='checked_out').length,p=AC.filter(c=>c.status==='pending').length,a=AC.filter(c=>c.status==='absent').length,act=AC.filter(c=>c.status==='checked_in').length;
+  el('st-t').textContent=t;el('st-i').textContent=i;el('st-p').textContent=p;el('st-o').textContent=o;el('st-a').textContent=a;el('st-act').textContent=t-a;el('st-duty').textContent=act;
+  el('co-tog').classList.toggle('on',CO);el('co-lbl').textContent=CO?'On — Counter can checkout':'Off';
+  renderPos();
+  popAdmFlt();
+  el('flt-q').value=prevQ;el('flt-st').value=prevSt;
+  if([...el('flt-pos').options].some(o=>o.value===prevPos))el('flt-pos').value=prevPos;
+  if([...el('flt-meal').options].some(o=>o.value===prevMeal))el('flt-meal').value=prevMeal;
+  fltAdmin()
+ } finally {
+  grid.classList.remove('loading');icon.classList.remove('spinning');btnT.style.pointerEvents='';btnB.disabled=false;
+ }}
 
 let PV='in';
 function posView(v){PV=v;el('pv-in').classList.toggle('active',v==='in');el('pv-out').classList.toggle('active',v==='out');renderPos()}

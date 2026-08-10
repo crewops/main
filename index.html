@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Crew Check-In</title>
+<title>Event Management System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 <style>
@@ -85,13 +85,13 @@ html,body{overscroll-behavior-y:contain}
 
 <!-- HOME -->
 <div id="s-home" class="screen active">
-<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In</h1><p>Event Management System</p></div>
+<div class="logo"><h1>🎪 Event Management System</h1></div>
 <div class="card"><h2>Enter Event Code</h2><input type="text" id="inp-ec" placeholder="Event Code" style="text-transform:uppercase"><div id="err-home" class="alert" style="display:none"></div><button class="btn btn-primary" onclick="doVerify()">Continue</button></div>
 </div>
 
 <!-- ROLE -->
 <div id="s-role" class="screen">
-<div class="logo"><h1>🎪 <span class="accent">Crew</span> Check-In</h1></div><div id="lbl-role" class="evn"></div>
+<div class="logo"><h1>🎪 Event Management System</h1></div><div id="lbl-role" class="evn"></div>
 <div class="card"><h2>Select Your Role</h2><div class="role-grid"><div class="role-btn" onclick="go('crew')"><span class="icon">👤</span>Crew</div><div class="role-btn" onclick="go('counter')"><span class="icon">📋</span>Counter</div><div class="role-btn" onclick="go('admin')"><span class="icon">⚙️</span>Admin</div></div></div>
 <button class="btn btn-outline" onclick="show('s-home')">← Back</button>
 </div>
@@ -247,6 +247,8 @@ html,body{overscroll-behavior-y:contain}
 <div id="qr-tmp" style="display:none"></div>
 <!-- Popup -->
 <div id="popup" class="popup"></div>
+<!-- Copyright footer (hidden on Export Report screen) -->
+<div id="footer-copyright" class="no-print" style="text-align:center;padding:16px 12px 24px;font-size:11px;color:#94a3b8">© 2026 Dream Vitae Management · Event Management System</div>
 
 <script>
 const API='https://script.google.com/macros/s/AKfycbxVXyMn-byyUMFy8nTBMGjEUTahSO9jWav9n7mhWAfrKSOYVmX3nyVEW4cfurAAIcxT-Q/exec';
@@ -261,7 +263,7 @@ function fmtTime(t){if(!t||t==='-')return'-';return t}
 
 // ===== UTILS =====
 function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();if(id==='s-role'||id==='s-home')clearSession()}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();if(id==='s-role'||id==='s-home')clearSession();el('footer-copyright').style.display=(id==='s-export')?'none':'block'}
 function mg(id,m,t){const e=document.getElementById(id);e.style.display='block';e.className='alert alert-'+t;e.textContent=m}
 function hd(id){document.getElementById(id).style.display='none'}
 function el(id){return document.getElementById(id)}

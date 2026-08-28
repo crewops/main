@@ -151,7 +151,7 @@ html,body{overscroll-behavior-y:contain}
     <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="ci-st"></span></div>
    </div>
    <div class="card" id="f-cin" style="margin-top:0"><h2>✅ Check In</h2>
-    <div class="tag-input-group"><span class="tag-prefix" id="tag-prefix-lbl"></span><input type="text" inputmode="numeric" pattern="[0-9]*" id="inp-tagnum" placeholder="Number"></div>
+    <div id="tag-group"><div class="tag-input-group"><span class="tag-prefix" id="tag-prefix-lbl"></span><input type="text" inputmode="numeric" pattern="[0-9]*" id="inp-tagnum" placeholder="Number"></div></div>
     <input type="text" id="inp-cmt" placeholder="Comment (optional)"><button id="btn-cin" class="btn btn-success" onclick="doIn()">Confirm Check In</button></div>
    <div class="card" id="f-cout" style="display:none"><h2>🔄 Check Out</h2><p style="font-size:13px;color:#64748b;margin-bottom:12px">Confirm returned: tag, wristband & tools</p><button id="btn-cout" class="btn btn-yellow" onclick="doOut()">Confirm Check Out</button></div>
    <div class="card" id="f-cmt" style="display:none"><h2>💬 Comment</h2><div id="ci-oldcmt" class="comment-box" style="display:none"></div><textarea id="inp-ncmt" placeholder="Write comment..."></textarea><button class="btn btn-primary" onclick="doCmt('counter')">Save</button></div>
@@ -252,7 +252,7 @@ html,body{overscroll-behavior-y:contain}
 
 <script>
 const API='https://script.google.com/macros/s/AKfycbxVXyMn-byyUMFy8nTBMGjEUTahSO9jWav9n7mhWAfrKSOYVmX3nyVEW4cfurAAIcxT-Q/exec';
-let E={c:'',n:'',ctoken:'',atoken:''},D=[],Tags={},CO=false,scanner=null,AK='',AI='',AC=[];
+let E={c:'',n:'',ctoken:'',atoken:''},D=[],Tags={},CO=false,RT=true,scanner=null,AK='',AI='',AC=[];
 
 // IC & phone normalizer
 function fmtIC(ic){const s=String(ic||'').replace(/[-\s]/g,'');if(s.length===12)return s.substring(0,6)+'-'+s.substring(6,8)+'-'+s.substring(8);return s}
@@ -310,9 +310,9 @@ const r=await api('verifyCounterPassword',{eventCode:E.c,password:pw});if(!r.suc
 E.ctoken=r.token;saveSession();hd('err-clogin');el('lbl-counter').textContent='📅 '+E.n;show('s-counter');await loadData();startCam();showQ()}
 
 async function loadData(){
- try{const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false,token:E.ctoken});if(r.success){D=r.crew;Tags=r.usedTags;CO=r.checkoutEnabled;
-   localStorage.setItem('dc_'+E.c,JSON.stringify({d:D,t:Tags,co:CO}));populateDE()}else if(r.message)mg('scan-msg',r.message,'error')}
- catch(e){const c=localStorage.getItem('dc_'+E.c);if(c){const j=JSON.parse(c);D=j.d;Tags=j.t||{};CO=j.co;populateDE();mg('scan-msg','⚡ Offline mode','warn')}}}
+ try{const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false,token:E.ctoken});if(r.success){D=r.crew;Tags=r.usedTags;CO=r.checkoutEnabled;RT=r.requiresTag!==false;
+   localStorage.setItem('dc_'+E.c,JSON.stringify({d:D,t:Tags,co:CO,rt:RT}));populateDE()}else if(r.message)mg('scan-msg',r.message,'error')}
+ catch(e){const c=localStorage.getItem('dc_'+E.c);if(c){const j=JSON.parse(c);D=j.d;Tags=j.t||{};CO=j.co;RT=j.rt!==false;populateDE();mg('scan-msg','⚡ Offline mode','warn')}}}
 
 function findIC(ic){const n=String(ic).replace(/[-\s]/g,'');return D.filter(c=>String(c.ic).replace(/[-\s]/g,'')===n)}
 function findKey(k){return D.find(c=>c.key===k)}
@@ -330,6 +330,7 @@ function showCrew(c){
  ['inp-tagnum','inp-cmt','inp-ncmt','inp-mic','inp-dtag'].forEach(id=>{try{el(id).value=''}catch(e){}});hd('ci-result');el('multi').style.display='none';
  el('ci-name').textContent=c.name;el('ci-ic').textContent=c.ic;el('ci-sec').textContent=c.section;el('ci-lvl').textContent=c.level;el('ci-pos').textContent=c.position;el('ci-ts').textContent=c.tshirt||'-';el('ci-meal').textContent=c.meal||'-';
  el('tag-prefix-lbl').textContent=c.position||'';
+ el('tag-group').style.display=RT?'block':'none';
  const ci=el('f-cin'),co=el('f-cout'),cm=el('f-cmt'),st=el('ci-st');
  if(c.status==='pending'){st.innerHTML=sb('pending');ci.style.display='block';co.style.display='none';cm.style.display='none'}
  else if(c.status==='checked_in'){st.innerHTML='<span class="badge badge-in">✅ In '+c.cin+'</span>';ci.style.display='none';co.style.display='block';cm.style.display='block'}
@@ -341,17 +342,18 @@ function showCrew(c){
 function onQR(text){try{const d=JSON.parse(text);if(d.eventCode!==E.c)return mg('scan-msg','Wrong event!','error');const k=String(d.ic).replace(/[-\s]/g,'')+'|'+d.section+'|'+d.level+'|'+d.position;const c=findKey(k);if(c){mg('scan-msg','✅ '+c.name,'success');stopCam();showCrew(c)}else mg('scan-msg','Not found in cache','error')}catch(e){mg('scan-msg','Invalid QR','error')}}
 
 // Check In
-async function doIn(){const num=el('inp-tagnum').value.trim(),cmt=el('inp-cmt').value.trim();if(!num){alert('Enter tag number');return}
- const tag=(el('tag-prefix-lbl').textContent||'').trim()+' '+num;
+async function doIn(){const cmt=el('inp-cmt').value.trim();let tag='';
+ if(RT){const num=el('inp-tagnum').value.trim();if(!num){alert('Enter tag number');return}
+  tag=(el('tag-prefix-lbl').textContent||'').trim()+' '+num}
  const k=el('cinfo').dataset.k,ic=el('cinfo').dataset.ic,tu=tag.toUpperCase();
- if(Tags[tu]){mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error');return}
+ if(RT&&Tags[tu]){mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error');return}
  const btn=el('btn-cin');if(btn.disabled)return;btn.disabled=true;const oldTxt=btn.textContent;btn.textContent='Checking in...';
  const data={eventCode:E.c,ic,tag,cmt,key:k,clientTime:myTime(),token:E.ctoken};
  try{const r=await api('checkIn',data);
-  if(r.success){const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=r.time}Tags[tu]=c?c.name:'';popup('✅ '+(c?c.name:'Checked in')+' — '+tag,'#10b981');nextCrew()}
+  if(r.success){const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin=r.time}if(RT)Tags[tu]=c?c.name:'';popup('✅ '+(c?c.name:'Checked in')+(tag?' — '+tag:''),'#10b981');nextCrew()}
   else mg('ci-result',r.message,'error')}
- catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin='(offline)'}Tags[tu]=c?c.name:'';
-  popup('⚡ Saved offline — '+tag,'#f59e0b');nextCrew()}
+ catch(e){if(!navigator.onLine){addQ('checkIn',data);const c=findKey(k);if(c){c.status='checked_in';c.tag=tag;c.cin='(offline)'}if(RT)Tags[tu]=c?c.name:'';
+  popup('⚡ Saved offline'+(tag?' — '+tag:''),'#f59e0b');nextCrew()}
   else mg('ci-result','Server error. Try again.','error')}
  finally{btn.disabled=false;btn.textContent=oldTxt}}
 

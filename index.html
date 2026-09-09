@@ -262,7 +262,20 @@ function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000).t
 function fmtTime(t){if(!t||t==='-')return'-';return t}
 
 // ===== UTILS =====
-function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
+function api(a,p={},triesLeft=2){return new Promise((ok,no)=>{
+  const attempt=(n)=>{
+    const x=new XMLHttpRequest();x.timeout=15000;
+    x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);
+    x.onload=function(){
+      try{ok(JSON.parse(x.responseText))}
+      catch(e){if(n>0)setTimeout(()=>attempt(n-1),800);else no(e)}
+    };
+    x.onerror=()=>{if(n>0)setTimeout(()=>attempt(n-1),800);else no(new Error('Net'))};
+    x.ontimeout=()=>{if(n>0)setTimeout(()=>attempt(n-1),800);else no(new Error('Timeout'))};
+    x.send()
+  };
+  attempt(triesLeft)
+})}
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();if(id==='s-role'||id==='s-home')clearSession();el('footer-copyright').style.display=(id==='s-export')?'none':'block'}
 function mg(id,m,t){const e=document.getElementById(id);e.style.display='block';e.className='alert alert-'+t;e.textContent=m}
 function hd(id){document.getElementById(id).style.display='none'}

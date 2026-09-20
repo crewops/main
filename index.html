@@ -262,20 +262,7 @@ function myTime(){const d=new Date();return new Date(d.getTime()+8*60*60*1000).t
 function fmtTime(t){if(!t||t==='-')return'-';return t}
 
 // ===== UTILS =====
-function api(a,p={},triesLeft=2){return new Promise((ok,no)=>{
-  const attempt=(n)=>{
-    const x=new XMLHttpRequest();x.timeout=15000;
-    x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);
-    x.onload=function(){
-      try{ok(JSON.parse(x.responseText))}
-      catch(e){if(n>0)setTimeout(()=>attempt(n-1),800);else no(e)}
-    };
-    x.onerror=()=>{if(n>0)setTimeout(()=>attempt(n-1),800);else no(new Error('Net'))};
-    x.ontimeout=()=>{if(n>0)setTimeout(()=>attempt(n-1),800);else no(new Error('Timeout'))};
-    x.send()
-  };
-  attempt(triesLeft)
-})}
+function api(a,p={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.timeout=15000;x.open('GET',API+'?action='+a+'&data='+encodeURIComponent(JSON.stringify(p)),true);x.onload=function(){try{ok(JSON.parse(x.responseText))}catch(e){no(e)}};x.onerror=()=>no(new Error('Net'));x.ontimeout=()=>no(new Error('Timeout'));x.send()})}
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id!=='s-counter')stopCam();if(id==='s-role'||id==='s-home')clearSession();el('footer-copyright').style.display=(id==='s-export')?'none':'block'}
 function mg(id,m,t){const e=document.getElementById(id);e.style.display='block';e.className='alert alert-'+t;e.textContent=m}
 function hd(id){document.getElementById(id).style.display='none'}
@@ -399,12 +386,12 @@ function counterBack(){
 function nextCrew(){el('cinfo').style.display='none';el('multi').style.display='none';['inp-tagnum','inp-cmt','inp-ncmt','inp-mic'].forEach(id=>el(id).value='');mg('scan-msg','📷 Ready — point at next QR code','info');if(el('t-scan').classList.contains('active'))startCam()}
 
 // During Event
-function populateDE(){const p=[...new Set(D.map(c=>c.position).filter(Boolean))].sort(),s=[...new Set(D.map(c=>c.section).filter(Boolean))].sort(),l=[...new Set(D.map(c=>c.level).filter(Boolean))].sort();
+function populateDE(){const p=[...new Set(D.map(c=>c.position).filter(Boolean).map(String))].sort(),s=[...new Set(D.map(c=>c.section).filter(Boolean).map(String))].sort(),l=[...new Set(D.map(c=>c.level).filter(Boolean).map(String))].sort();
  el('df-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('df-pos').innerHTML+='<option>'+v+'</option>');
  el('df-sec').innerHTML='<option value="">All Sections</option>';s.forEach(v=>el('df-sec').innerHTML+='<option>'+v+'</option>');
  el('df-lvl').innerHTML='<option value="">All Levels</option>';l.forEach(v=>el('df-lvl').innerHTML+='<option>'+v+'</option>')}
 function filterDE(){const p=el('df-pos').value,s=el('df-sec').value,l=el('df-lvl').value;
- const f=D.filter(c=>(!p||c.position===p)&&(!s||c.section===s)&&(!l||c.level===l)&&c.status!=='absent');
+ const f=D.filter(c=>(!p||String(c.position)===p)&&(!s||String(c.section)===s)&&(!l||String(c.level)===l)&&c.status!=='absent');
  if(!f.length){el('de-list').innerHTML='<div class="loading">No crew</div>';return}
  el('de-list').innerHTML=f.map(c=>{const x=[];if(!p)x.push(c.position);if(!s)x.push(c.section);if(!l)x.push(c.level);
   return'<div class="crew-item"><span class="n">'+c.name+'</span>'+(x.length?'<span class="m">'+x.join(' · ')+'</span>':'')+'</div>'}).join('')}
@@ -511,18 +498,19 @@ async function doReplace(){const o=el('r-oic').value.trim(),n=el('r-nn').value.t
 
 async function doExport(){mg('exp-msg','Generating...','info');const r=await api('getExportData',{eventCode:E.c,token:E.atoken});if(!r.success)return mg('exp-msg',r.message,'error');hd('exp-msg');
  const g={};r.crewList.forEach(c=>{if(!g[c.position])g[c.position]=[];g[c.position].push(c)});
- let h='<div style="text-align:center;margin-bottom:24px;font-family:Arial"><h1 style="font-size:20px;margin:0">'+r.eventName+'</h1><p style="color:#666;font-size:13px;margin-top:4px">Attendance Report'+(r.eventDate?' · '+new Date(r.eventDate).toLocaleDateString():'')+'</p></div>';
+ let h='<div style="text-align:center;margin-bottom:24px;font-family:Arial"><h1 style="font-size:20px;margin:0">'+r.eventName+'</h1><p style="color:#666;font-size:13px;margin-top:4px">Attendance Report'+(r.eventDate?' · '+String(r.eventDate).split(' ')[0]:'')+'</p></div>';
  Object.entries(g).forEach(([p,crew])=>{h+='<h2 style="font-size:15px;margin:20px 0 8px;padding:8px 14px;background:#f5f3ff;color:#6366f1;border-radius:8px;border-left:4px solid #6366f1;font-family:Arial">'+p+' ('+crew.length+')</h2><table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial"><tr style="background:#f8fafc"><th style="border:1px solid #e2e8f0;padding:8px;text-align:center;width:40px">No</th><th style="border:1px solid #e2e8f0;padding:8px">Name</th><th style="border:1px solid #e2e8f0;padding:8px">IC</th><th style="border:1px solid #e2e8f0;padding:8px">Check In</th><th style="border:1px solid #e2e8f0;padding:8px">Check Out</th></tr>';crew.forEach((c,i)=>{h+='<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:center">'+(i+1)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.name+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+c.ic+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cin)+'</td><td style="border:1px solid #e2e8f0;padding:6px">'+fmtTime(c.cout)+'</td></tr>'});h+='</table>'});
  h+='<div style="margin-top:30px;font-size:11px;color:#94a3b8;text-align:center;font-family:Arial">Generated '+new Date().toLocaleString()+'</div>';
  el('exp-html').innerHTML=h;show('s-export')}
 
 function renderAdm(list){const c=el('admin-tbl');el('flt-sum').textContent='Showing '+list.length;if(!list.length){c.innerHTML='<div class="loading">No crew</div>';return}
+ const nz=v=>(v===undefined||v===null||v==='')?'-':v;
  let h='<div style="overflow-x:auto"><table><tr><th>Name</th><th>IC</th><th>Phone</th><th>Sec</th><th>Lvl</th><th>Position</th><th>Meal</th><th>Tag</th><th>Status</th></tr>';
- list.forEach(r=>{const pf=fmtPhone(r.phone);const ph=pf!=='-'?'<a href="tel:'+pf+'" style="color:#6366f1;text-decoration:none">📞'+pf+'</a>':'-';h+='<tr'+(r.blacklisted?' style="background:#fef2f2"':'')+'><td style="font-weight:600">'+(r.blacklisted?'⚫ ':'')+r.name+'</td><td style="font-size:11px;color:#64748b">'+fmtIC(r.ic)+'</td><td style="font-size:11px">'+ph+'</td><td>'+(r.section||'-')+'</td><td>'+(r.level||'-')+'</td><td><span class="pos">'+(r.position||'-')+'</span></td><td style="font-size:11px">'+(r.meal||'-')+'</td><td style="color:#6366f1;font-weight:600">'+(r.tag||'-')+'</td><td>'+sb(r.status)+'</td></tr>'});
+ list.forEach(r=>{const pf=fmtPhone(r.phone);const ph=pf!=='-'?'<a href="tel:'+pf+'" style="color:#6366f1;text-decoration:none">📞'+pf+'</a>':'-';h+='<tr'+(r.blacklisted?' style="background:#fef2f2"':'')+'><td style="font-weight:600">'+(r.blacklisted?'⚫ ':'')+r.name+'</td><td style="font-size:11px;color:#64748b">'+fmtIC(r.ic)+'</td><td style="font-size:11px">'+ph+'</td><td>'+nz(r.section)+'</td><td>'+nz(r.level)+'</td><td><span class="pos">'+nz(r.position)+'</span></td><td style="font-size:11px">'+nz(r.meal)+'</td><td style="color:#6366f1;font-weight:600">'+nz(r.tag)+'</td><td>'+sb(r.status)+'</td></tr>'});
  h+='</table></div>';c.innerHTML=h}
 function fltAdmin(){const q=el('flt-q').value.toLowerCase().trim(),st=el('flt-st').value,pos=el('flt-pos').value,meal=el('flt-meal').value;
- renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))||fmtPhone(c.phone).includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||c.position===pos)&&(!meal||c.meal===meal)}))}
-function popAdmFlt(){const p=[...new Set(AC.map(c=>c.position).filter(Boolean))].sort(),m=[...new Set(AC.map(c=>c.meal).filter(Boolean))].sort();
+ renderAdm(AC.filter(c=>{const mq=!q||c.name.toLowerCase().includes(q)||String(c.ic||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))||fmtPhone(c.phone).includes(q)||String(c.tag||'').toLowerCase().includes(q);return mq&&(!st||c.status===st)&&(!pos||String(c.position)===pos)&&(!meal||String(c.meal)===meal)}))}
+function popAdmFlt(){const p=[...new Set(AC.map(c=>c.position).filter(Boolean).map(String))].sort(),m=[...new Set(AC.map(c=>c.meal).filter(Boolean).map(String))].sort();
  el('flt-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('flt-pos').innerHTML+='<option>'+v+'</option>');
  el('flt-meal').innerHTML='<option value="">All Meals</option>';m.forEach(v=>el('flt-meal').innerHTML+='<option>'+v+'</option>')}
 

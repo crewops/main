@@ -51,7 +51,9 @@ td{padding:10px 8px;border-bottom:1px solid #f1f5f9}tr:hover td{background:#f8fa
 .qr-frame{display:inline-block;padding:16px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);border:1px solid #e2e8f0}
 .divider{text-align:center;padding:14px 0;color:#6366f1;font-weight:700;font-size:14px;border-top:2px dashed #e2e8f0;margin-top:8px}
 .pick{border:2px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;background:#fff}.pick:active{border-color:#6366f1;background:#f5f3ff}.pick.off{opacity:.5;pointer-events:none}
-.crew-item{padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.crew-item{padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px}
+.crew-item:active{background:#f8fafc}
+.crew-item.sel{background:#f5f3ff}
 .crew-item .n{font-weight:600}.crew-item .m{font-size:12px;color:#94a3b8}
 .toggle-wrap{display:flex;align-items:center;gap:12px}.toggle{width:50px;height:28px;background:#cbd5e1;border-radius:14px;position:relative;cursor:pointer}.toggle.on{background:#10b981}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.1)}.toggle.on::after{left:25px}
@@ -164,7 +166,7 @@ html,body{overscroll-behavior-y:contain}
 <!-- DURING EVENT -->
 <div id="mode-dur" style="display:none">
  <div class="tab-bar"><button class="tab-btn active" id="dt-find" onclick="dTab('find')">🔍 Find Crew</button><button class="tab-btn" id="dt-tag" onclick="dTab('tag')">🏷️ Tag</button></div>
- <div id="dtab-find"><div class="card"><h2>Filter</h2><select id="df-pos" onchange="filterDE()"><option value="">All Positions</option></select><select id="df-sec" onchange="filterDE()"><option value="">All Sections</option></select><select id="df-lvl" onchange="filterDE()"><option value="">All Levels</option></select></div><div class="card"><div id="de-list"><div class="loading">Select filters</div></div></div></div>
+ <div id="dtab-find"><div class="card"><h2>Filter</h2><select id="df-pos" onchange="filterDE()"><option value="">All Positions</option></select><select id="df-sec" onchange="filterDE()"><option value="">All Sections</option></select><select id="df-lvl" onchange="filterDE()"><option value="">All Levels</option></select></div><div class="card"><div id="de-list"><div class="loading">Select filters</div></div></div><div id="de-detail" style="display:none"></div></div>
  <div id="dtab-tag" style="display:none">
   <div class="card"><h2>Search by Tag</h2><input type="text" id="inp-dtag" placeholder="Tag Number"><button class="btn btn-primary" onclick="tagSearch()">Search</button></div>
   <div id="tag-result" style="display:none"></div>
@@ -284,7 +286,9 @@ async function restoreSession(){
 restoreSession();
 function getQ(){try{return JSON.parse(localStorage.getItem('oq_'+E.c)||'[]')}catch(e){return[]}}
 function saveQ(q){localStorage.setItem('oq_'+E.c,JSON.stringify(q));const c=el('sync-card');if(q.length){c.style.display='block';el('sync-n').textContent=q.length}else c.style.display='none'}
-function addQ(action,data){const q=getQ();q.push({action,data});saveQ(q)}
+function addQ(action,data){const q=getQ();
+ if((action==='checkIn'||action==='checkOut')&&q.some(x=>x.action===action&&x.data.key===data.key))return;
+ q.push({action,data});saveQ(q)}
 async function doSync(){const q=getQ();if(!q.length)return;try{await api('batchSync',{operations:q});saveQ([]);popup('✅ Synced '+q.length+' records!');await loadData()}catch(e){popup('❌ Sync failed','#ef4444')}}
 function showQ(){const q=getQ();if(q.length){el('sync-card').style.display='block';el('sync-n').textContent=q.length}}
 window.addEventListener('online',()=>{const q=getQ();if(q.length){popup('🌐 Back online! Syncing...');setTimeout(doSync,1000)}});
@@ -318,7 +322,9 @@ function findIC(ic){const n=String(ic).replace(/[-\s]/g,'');return D.filter(c=>S
 function findKey(k){return D.find(c=>c.key===k)}
 function findTag(t){const u=String(t).trim().toUpperCase();return D.find(c=>String(c.tag).trim().toUpperCase()===u&&c.status!=='absent')}
 
-function cMode(m){el('m-pre').classList.toggle('active',m==='pre');el('m-dur').classList.toggle('active',m==='dur');el('mode-pre').style.display=m==='pre'?'block':'none';el('mode-dur').style.display=m==='dur'?'block':'none';if(m==='pre'&&el('t-scan').classList.contains('active'))startCam();else stopCam()}
+async function cMode(m){el('m-pre').classList.toggle('active',m==='pre');el('m-dur').classList.toggle('active',m==='dur');el('mode-pre').style.display=m==='pre'?'block':'none';el('mode-dur').style.display=m==='dur'?'block':'none';
+ if(m==='pre'&&el('t-scan').classList.contains('active'))startCam();else stopCam();
+ if(m==='dur'){const pp=el('df-pos').value,ps=el('df-sec').value,pl=el('df-lvl').value;await loadData();el('df-pos').value=pp;el('df-sec').value=ps;el('df-lvl').value=pl;if(pp||ps||pl)filterDE();el('de-detail').style.display='none'}}
 function cTab(t){['scan','ic'].forEach(x=>{el('t-'+x).classList.toggle('active',x===t);el('tab-'+x).style.display=x===t?'block':'none'});el('cinfo').style.display='none';el('multi').style.display='none';if(t==='scan')startCam();else stopCam()}
 function dTab(t){el('dt-find').classList.toggle('active',t==='find');el('dt-tag').classList.toggle('active',t==='tag');el('dtab-find').style.display=t==='find'?'block':'none';el('dtab-tag').style.display=t==='tag'?'block':'none'}
 
@@ -333,13 +339,13 @@ function showCrew(c){
  el('tag-group').style.display=RT?'block':'none';
  const ci=el('f-cin'),co=el('f-cout'),cm=el('f-cmt'),st=el('ci-st');
  if(c.status==='pending'){st.innerHTML=sb('pending');ci.style.display='block';co.style.display='none';cm.style.display='none'}
- else if(c.status==='checked_in'){st.innerHTML='<span class="badge badge-in">✅ In '+c.cin+'</span>';ci.style.display='none';co.style.display='block';cm.style.display='block'}
+ else if(c.status==='checked_in'){st.innerHTML='<span class="badge badge-in">✅ In '+c.cin+'</span>'+(CO?'':'<div class="alert alert-error" style="margin-top:8px">Checkout not open yet — ask Admin to enable Checkout Mode</div>');ci.style.display='none';co.style.display=CO?'block':'none';cm.style.display='block'}
  else if(c.status==='checked_out'){st.innerHTML='<span class="badge badge-out">🔵 Out '+c.cout+'</span>';ci.style.display='none';co.style.display='none';cm.style.display='block'}
  else{st.innerHTML=sb(c.status);ci.style.display='none';co.style.display='none';cm.style.display='block'}
  const ce=el('ci-oldcmt');if(c.cmt){ce.style.display='block';ce.textContent='📝 '+c.cmt}else ce.style.display='none';
  el('cinfo').style.display='block';el('cinfo').dataset.k=c.key;el('cinfo').dataset.ic=c.ic;stopCam()}
 
-function onQR(text){try{const d=JSON.parse(text);if(d.eventCode!==E.c)return mg('scan-msg','Wrong event!','error');const k=String(d.ic).replace(/[-\s]/g,'')+'|'+d.section+'|'+d.level+'|'+d.position;const c=findKey(k);if(c){mg('scan-msg','✅ '+c.name,'success');stopCam();showCrew(c)}else mg('scan-msg','Not found in cache','error')}catch(e){mg('scan-msg','Invalid QR','error')}}
+function onQR(text){try{const d=JSON.parse(text);if(d.eventCode!==E.c)return mg('scan-msg','Wrong event!','error');const k=String(d.ic).replace(/[-\s]/g,'')+'|'+String(d.section).trim()+'|'+String(d.level).trim()+'|'+String(d.position).trim();const c=findKey(k);if(c){mg('scan-msg','✅ '+c.name,'success');stopCam();showCrew(c)}else mg('scan-msg','Not found in cache','error')}catch(e){mg('scan-msg','Invalid QR','error')}}
 
 // Check In
 async function doIn(){const cmt=el('inp-cmt').value.trim();let tag='';
@@ -386,25 +392,30 @@ function counterBack(){
 function nextCrew(){el('cinfo').style.display='none';el('multi').style.display='none';['inp-tagnum','inp-cmt','inp-ncmt','inp-mic'].forEach(id=>el(id).value='');mg('scan-msg','📷 Ready — point at next QR code','info');if(el('t-scan').classList.contains('active'))startCam()}
 
 // During Event
-function populateDE(){const p=[...new Set(D.map(c=>c.position).filter(Boolean).map(String))].sort(),s=[...new Set(D.map(c=>c.section).filter(Boolean).map(String))].sort(),l=[...new Set(D.map(c=>c.level).filter(Boolean).map(String))].sort();
+function populateDE(){const p=[...new Set(D.map(c=>c.position).filter(Boolean).map(v=>String(v).trim()))].sort(),s=[...new Set(D.map(c=>c.section).filter(Boolean).map(v=>String(v).trim()))].sort(),l=[...new Set(D.map(c=>c.level).filter(Boolean).map(v=>String(v).trim()))].sort();
  el('df-pos').innerHTML='<option value="">All Positions</option>';p.forEach(v=>el('df-pos').innerHTML+='<option>'+v+'</option>');
  el('df-sec').innerHTML='<option value="">All Sections</option>';s.forEach(v=>el('df-sec').innerHTML+='<option>'+v+'</option>');
  el('df-lvl').innerHTML='<option value="">All Levels</option>';l.forEach(v=>el('df-lvl').innerHTML+='<option>'+v+'</option>')}
 function filterDE(){const p=el('df-pos').value,s=el('df-sec').value,l=el('df-lvl').value;
- const f=D.filter(c=>(!p||String(c.position)===p)&&(!s||String(c.section)===s)&&(!l||String(c.level)===l)&&c.status!=='absent');
+ const f=D.filter(c=>(!p||String(c.position).trim()===p)&&(!s||String(c.section).trim()===s)&&(!l||String(c.level).trim()===l)&&c.status!=='absent');
  if(!f.length){el('de-list').innerHTML='<div class="loading">No crew</div>';return}
  el('de-list').innerHTML=f.map(c=>{const x=[];if(!p)x.push(c.position);if(!s)x.push(c.section);if(!l)x.push(c.level);
-  return'<div class="crew-item"><span class="n">'+c.name+'</span>'+(x.length?'<span class="m">'+x.join(' · ')+'</span>':'')+'</div>'}).join('')}
+  return'<div class="crew-item" data-k="'+c.key+'" data-ic="'+c.ic+'" onclick="deItemClick(this)"><span class="n">'+c.name+'</span>'+(x.length?'<span class="m">'+x.join(' · ')+'</span>':'')+sb(c.status)+'</div>'}).join('')}
 
 // Tag search (During Event) — with checkout
 function tagSearch(){const tag=el('inp-dtag').value.trim();if(!tag)return;const c=findTag(tag);const ct=el('tag-result');ct.style.display='block';
- if(c){ct.innerHTML='<div class="card"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+c.name+'</span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+c.position+'</span></span></div><div class="info-row"><span class="info-label">Section · Level</span><span class="info-value">'+c.section+' · '+c.level+'</span></div><div class="info-row"><span class="info-label">Tag</span><span class="info-value" style="color:#6366f1;font-weight:700">'+c.tag+'</span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(c.status)+'</span></div>'+(c.status==='checked_in'?'<button class="btn btn-yellow" style="margin-top:12px" onclick="tagOut(\''+c.key+'\',\''+c.ic+'\')">🔄 Check Out</button>':'')+'</div>';
+ if(c){ct.innerHTML='<div class="card"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+c.name+'</span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+c.position+'</span></span></div><div class="info-row"><span class="info-label">Section · Level</span><span class="info-value">'+c.section+' · '+c.level+'</span></div><div class="info-row"><span class="info-label">Tag</span><span class="info-value" style="color:#6366f1;font-weight:700">'+c.tag+'</span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(c.status)+'</span></div>'+(c.status==='checked_in'?(CO?'<button class="btn btn-yellow" style="margin-top:12px" onclick="tagOut(\''+c.key+'\',\''+c.ic+'\',\'tag\')">🔄 Check Out</button>':'<div class="alert alert-error" style="margin-top:12px">Checkout not open yet — ask Admin to enable Checkout Mode</div>'):'')+'</div>';
  }else ct.innerHTML='<div class="alert alert-error">Tag not found</div>'}
 
-async function tagOut(key,ic){
+function deItemClick(elm){document.querySelectorAll('#de-list .crew-item').forEach(x=>x.classList.remove('sel'));elm.classList.add('sel');refreshDeDetail(elm.dataset.k)}
+function refreshDeDetail(k){const c=findKey(k);const ct=el('de-detail');if(!c){ct.style.display='none';return}
+ ct.style.display='block';
+ ct.innerHTML='<div class="card"><div class="info-row"><span class="info-label">Name</span><span class="info-value">'+c.name+'</span></div><div class="info-row"><span class="info-label">Position</span><span class="info-value"><span class="pos">'+c.position+'</span></span></div><div class="info-row"><span class="info-label">Section · Level</span><span class="info-value">'+c.section+' · '+c.level+'</span></div><div class="info-row"><span class="info-label">Tag</span><span class="info-value" style="color:#6366f1;font-weight:700">'+(c.tag||'-')+'</span></div><div class="info-row"><span class="info-label">Status</span><span class="info-value">'+sb(c.status)+'</span></div>'+(c.status==='checked_in'?(CO?'<button class="btn btn-yellow" style="margin-top:12px" onclick="tagOut(\''+c.key+'\',\''+c.ic+'\',\'find\')">🔄 Check Out</button>':'<div class="alert alert-error" style="margin-top:12px">Checkout not open yet — ask Admin to enable Checkout Mode</div>'):'')+'</div>'}
+
+async function tagOut(key,ic,src){src=src||'tag';
  const data={eventCode:E.c,ic,key,clientTime:myTime(),token:E.ctoken};
- try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');tagSearch()}else popup(r.message,'#ef4444')}
- catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');tagSearch()}else popup('Server error','#ef4444')}}
+ try{const r=await api('checkOut',data);if(r.success){const c=findKey(key);if(c){c.status='checked_out';c.cout=r.time}popup('✅ Checked out!');if(src==='find')refreshDeDetail(key);else tagSearch()}else popup(r.message,'#ef4444')}
+ catch(e){if(!navigator.onLine){addQ('checkOut',data);const c=findKey(key);if(c){c.status='checked_out';c.cout=myTime()+' (offline)'}popup('⚡ Saved offline','#f59e0b');if(src==='find')refreshDeDetail(key);else tagSearch()}else popup('Server error','#ef4444')}}
 
 // ===== CAMERA (live scanner primary on GitHub Pages) =====
 function startCam(){if(scanner)return;

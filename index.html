@@ -215,6 +215,10 @@ const fmtIC=ic=>{const s=nic(ic);return s.length===12?s.slice(0,6)+'-'+s.slice(6
 const maskIC=ic=>{const s=nic(ic);return s.length>4?'••••••••'+s.slice(-4):s};
 function fmtPhone(ph){let s=String(ph||'').trim();if(!s||s==='0'||s==='null')return'-';if(/^[1-9]/.test(s)&&s.length>=9&&s.length<=10)s='0'+s;return s}
 const myTime=()=>new Date(Date.now()+288e5).toISOString().replace('T',' ').slice(0,19),hmNow=()=>myTime().slice(11,16);
+const TAGP={/* optional overrides, e.g. 'Section Head':'SH','Usher':'U' */};
+const tagPre=p=>{p=String(p||'').trim();if(TAGP[p])return TAGP[p];const w=p.split(/\s+/).filter(Boolean);return w.length>1?w.map(x=>x[0]).join('').toUpperCase():p.slice(0,1).toUpperCase()};
+const tagN=t=>String(t||'').trim().toUpperCase().replace(/\s+/g,' ').replace(/(\s)0+(?=\d)/,'$1');
+let busy=false;
 const fmtTime=t=>!t||t==='-'?'-':t;
 
 // ===== network: POST (nothing sensitive in the URL). Throws on network error / timeout =====
@@ -240,16 +244,16 @@ function adminLost(){E.at='';try{sessionStorage.removeItem('as')}catch(e){}bad('
 // ===== offline queue (writes are saved locally first, then synced in batches) =====
 const getQ=()=>lsGet('oq_'+E.c)||[],getF=()=>lsGet('of_'+E.c)||[];
 function saveQ(q){lsSet('oq_'+E.c,q);renderSync()}
-function enq(action,data){const q=getQ();q.push({id:Math.random().toString(36).slice(2)+Date.now().toString(36),action,data});saveQ(q)}
+function enq(action,data){const q=getQ(),op={id:Math.random().toString(36).slice(2)+Date.now().toString(36),action,data};q.push(op);saveQ(q);return op}
 function clrFail(){lsSet('of_'+E.c,[]);renderSync()}
 function renderSync(){const q=getQ(),f=getF();$('sync-card').style.display=q.length?'block':'none';$('sync-n').textContent=q.length;$('fail-card').style.display=f.length?'block':'none';$('fail-list').innerHTML=f.map(x=>'<div class="crew-item"><span><b>'+esc(x.name)+'</b><br><small>'+esc(x.msg)+'</small></span></div>').join('')}
 async function flush(){
- if(syncing||!E.ct||!getQ().length)return;syncing=true;
+ if(!E.ct)return;while(syncing)await new Promise(r=>setTimeout(r,100));if(!getQ().length)return;syncing=true;
  try{for(;;){const q=getQ();if(!q.length)break;const b=q.slice(0,10);let r;
    try{r=await api('batchSync',{eventCode:E.c,token:E.ct,operations:b},30000)}catch(e){setOff(true);break}
    if(!r.success){if(r.code==='AUTH')authLost();break}
    setOff(false);const done=new Set(),f=getF();
-   r.results.forEach(x=>{if(!x.success){const op=b.find(o=>o.id===x.id),c=op&&findKey(op.data.key);f.push({name:c?c.name:'?',msg:(op?op.action:'')+': '+x.message});if(c&&op.action==='checkIn'){c.status='pending';c.tag=''}}done.add(x.id)});
+   r.results.forEach(x=>{if(!x.success){const op=b.find(o=>o.id===x.id),c=op&&findKey(op.data.key);f.push({id:x.id,name:c?c.name:'?',msg:x.message});if(c&&op.action==='checkIn'){c.status='pending';c.tag='';delete Tags[tagN(op.data.tag)]}}done.add(x.id)});
    if(!done.size)break;lsSet('of_'+E.c,f);saveQ(getQ().filter(o=>!done.has(o.id)));persistD()}}
  finally{syncing=false;renderSync()}}
 setInterval(()=>{if(E.ct)flush()},20000);
@@ -287,14 +291,14 @@ function enterCounter(){$('lbl-counter').textContent='📅 '+E.n+' · '+E.who;sh
  startCam();renderSync();loadData()}
 const persistD=()=>lsSet('dc_'+E.c,{d:D,t:Tags,co:CO,rt:RT});
 function applyQ(){getQ().forEach(o=>{const c=findKey(o.data.key);if(!c)return;
- if(o.action==='checkIn'){c.status='checked_in';c.tag=o.data.tag;c.cin=o.data.ct;if(o.data.tag)Tags[o.data.tag.toUpperCase()]=c.name}else if(o.action==='checkOut'){c.status='checked_out';c.cout=o.data.ct}})}
+ if(o.action==='checkIn'){c.status='checked_in';c.tag=o.data.tag;c.cin=o.data.ct;if(o.data.tag)Tags[tagN(o.data.tag)]=c.name}else if(o.action==='checkOut'){c.status='checked_out';c.cout=o.data.ct}})}
 async function loadData(){
  try{await flush();const r=await api('getFullEventData',{eventCode:E.c,isAdmin:false,token:E.ct});
   if(r.success){D=r.crew;Tags=r.usedTags||{};CO=r.checkoutEnabled;RT=r.requiresTag!==false;applyQ();persistD();populateDE();setOff(false)}
   else if(r.code==='AUTH')authLost()}
  catch(e){setOff(true);if(!D.length){const c=lsGet('dc_'+E.c);if(c){D=c.d;Tags=c.t||{};CO=c.co;RT=c.rt!==false;populateDE()}}}}
 const findIC=ic=>{const n=nic(ic);return D.filter(c=>nic(c.ic)===n)},findKey=k=>D.find(c=>c.key===k);
-const findTag=t=>{const u=String(t).trim().toUpperCase();return D.find(c=>String(c.tag).trim().toUpperCase()===u&&c.status!=='absent')};
+const findTag=t=>{const u=tagN(t);return D.find(c=>tagN(c.tag)===u&&c.status!=='absent')};
 
 function cMode(m){$('m-pre').classList.toggle('active',m==='pre');$('m-dur').classList.toggle('active',m==='dur');$('mode-pre').style.display=m==='pre'?'block':'none';$('mode-dur').style.display=m==='dur'?'block':'none';if(m==='pre'&&$('t-scan').classList.contains('active'))startCam();else stopCam()}
 function cTab(t){['scan','ic'].forEach(x=>{$('t-'+x).classList.toggle('active',x===t);$('tab-'+x).style.display=x===t?'block':'none'});$('cinfo').style.display='none';$('multi').style.display='none';if(t==='scan')startCam();else stopCam()}
@@ -308,7 +312,7 @@ function pickOne(e){const c=findKey(e.dataset.k);if(c){$('multi').style.display=
 function showCrew(c){
  ['inp-tagnum','inp-cmt','inp-ncmt','inp-mic','inp-dtag'].forEach(id=>{$(id).value=''});hd('ci-result');$('multi').style.display='none';
  $('ci-name').textContent=c.name;$('ci-ic').textContent=maskIC(c.ic);$('ci-sec').textContent=c.section;$('ci-lvl').textContent=c.level;$('ci-pos').textContent=c.position;$('ci-ts').textContent=c.tshirt||'-';$('ci-meal').textContent=c.meal||'-';
- $('tag-prefix-lbl').textContent=c.position||'';$('tag-group').style.display=RT?'block':'none';
+ $('tag-prefix-lbl').textContent=tagPre(c.position);$('tag-group').style.display=RT?'block':'none';
  const ci=$('f-cin'),co=$('f-cout'),cm=$('f-cmt'),st=$('ci-st');
  if(c.status==='pending'){st.innerHTML=sb('pending');ci.style.display='block';co.style.display='none';cm.style.display='none'}
  else if(c.status==='checked_in'){st.innerHTML='<span class="badge badge-in">✅ In '+esc(c.cin)+'</span>';ci.style.display='none';co.style.display=CO?'block':'none';cm.style.display='block'}
@@ -324,12 +328,18 @@ async function onQR(text){let d;try{d=JSON.parse(text)}catch(e){bad('Invalid QR'
  if(!c){mg('scan-msg','Not in list — refreshing...','warn');await loadData();c=findKey(k)}
  if(c){mg('scan-msg','✅ '+c.name,'success');showCrew(c)}else{bad('Not found');mg('scan-msg','Not found. Look for Admin.','error')}}
 
-function doIn(){const k=$('cinfo').dataset.k,c=findKey(k);if(!c||c.status!=='pending')return;
+async function doIn(){if(busy)return;const k=$('cinfo').dataset.k,c=findKey(k);if(!c||c.status!=='pending')return;
  const cmt=$('inp-cmt').value.trim();let tag='';
- if(RT){const n=$('inp-tagnum').value.trim().replace(/^0+(?=\d)/,'');if(!n)return mg('ci-result','Enter tag number','error');tag=(c.position+' '+n).trim()}
- const tu=tag.toUpperCase();if(RT&&Tags[tu]&&Tags[tu]!==c.name){bad('Tag in use');return mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error')}
- const ct=myTime();enq('checkIn',{key:k,ic:c.ic,tag,cmt,ct});
- c.status='checked_in';c.tag=tag;c.cin=ct;if(tag)Tags[tu]=c.name;persistD();ok('✅ '+c.name+(tag?' — '+tag:''));nextCrew();flush()}
+ if(RT){const n=$('inp-tagnum').value.trim();if(!n)return mg('ci-result','Enter tag number','error');tag=tagPre(c.position)+' '+n}
+ const tu=tagN(tag);if(RT&&Tags[tu]&&Tags[tu]!==c.name){bad('Tag in use');return mg('ci-result','Tag "'+tag+'" already used by '+Tags[tu]+'!','error')}
+ busy=true;$('btn-cin').disabled=true;mg('ci-result','Saving...','info');
+ const ct=myTime(),op=enq('checkIn',{key:k,ic:c.ic,tag,cmt,ct});
+ c.status='checked_in';c.tag=tag;c.cin=ct;if(tag)Tags[tu]=c.name;persistD();
+ await Promise.race([flush(),new Promise(r=>setTimeout(r,5000))]);   // online: answer in ~1-2s; bad network: stays queued
+ busy=false;$('btn-cin').disabled=false;
+ const f=getF(),i=f.findIndex(x=>x.id===op.id);
+ if(i>=0){const m=f[i].msg;f.splice(i,1);lsSet('of_'+E.c,f);renderSync();bad('Not saved');mg('ci-result',m+' Choose another tag.','error');loadData();return}
+ ok('✅ '+c.name+(tag?' — '+tag:''));nextCrew()}
 function doOut(){const k=$('cinfo').dataset.k,c=findKey(k);if(!c||c.status!=='checked_in')return;if(!CO)return mg('ci-result','Checkout not enabled. Ask Admin.','error');
  const ct=myTime();enq('checkOut',{key:k,ic:c.ic,ct});c.status='checked_out';c.cout=ct;persistD();ok('🔄 '+c.name+' out');nextCrew();flush()}
 async function doCmt(role){const adm=role==='admin',inp=$(adm?'adm-ncmt':'inp-ncmt'),res=adm?'adm-cmsg':'ci-result',comment=inp.value.trim();
